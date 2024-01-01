@@ -1,8 +1,20 @@
 from prompts import PROMPTS
 
+class EvaluatorPrompt():
+    def __init__(
+            self,
+            prompt_id
+    ):
+        self.prompt_id = prompt_id
+    
+    def render(self, message):
+        context = '\n'.join([e for e in message])
+        rendered_prompt = PROMPTS[self.prompt_id].format(message=context)
+        return rendered_prompt
+
 class Prompt():
 
-    def __init__(
+    def __init__( #TODO: use dataclasses instead
             self,
             prompt_id,
             min_value,
@@ -45,7 +57,7 @@ class Negotiator():
         self.llm_instance = llm_instance
 
 
-class Property():
+class Property(): #TODO: add extra negotiation properties to the negotiation
 
     def __init__(
             self,
@@ -56,7 +68,7 @@ class Property():
         
         self.name = name
         self.rank = rank
-        self.property_type = property_type #positive/negative
+        self.property_type = property_type #positive/negative #TODO: add available categories
 
 
 class Item():
@@ -82,7 +94,7 @@ class Message():
             side,
             text
     ):
-    
+
         self.side = side #buyer, seller
         self.text = text
 
@@ -98,3 +110,15 @@ class Negotiation():
 
     def render_messages(self):
         return '\n'.join([e for e in self.messages])
+    
+class NegotiationEvaluator():
+
+    def __init__(
+            self,
+            prompt,
+            llm_instance
+
+    ):
+        
+        self.prompt = prompt
+        self.llm_instance = llm_instance
