@@ -17,6 +17,7 @@ class Prompt():
     def __init__( #TODO: use dataclasses instead
             self,
             prompt_id,
+            negotiator_name,
             min_value,
             max_value,
             product_name,
@@ -24,6 +25,7 @@ class Prompt():
     ):
         
         self.prompt_id = prompt_id
+        self.negotiator_name = negotiator_name
         self.min_value = min_value
         self.max_value = max_value
         self.product_name = product_name
@@ -31,12 +33,13 @@ class Prompt():
 
     def render(self, messages, total_interactions):
         rendered_prompt = PROMPTS[self.prompt_id].format(
+            negotiator_name = self.negotiator_name,
             product_name = self.product_name,
             product_type = self.product_type,
             min_value = self.min_value,
             max_value = self.max_value,
             previous_messages = messages,
-            total_interactions = total_interactions
+            total_interactions = total_interactions+1
         )
         return rendered_prompt
 
@@ -45,13 +48,11 @@ class Negotiator():
 
     def __init__(
             self,
-            name,
             side,
             prompt,
             llm_instance
     ):
         
-        self.name = name
         self.side = side
         self.prompt = prompt
         self.llm_instance = llm_instance

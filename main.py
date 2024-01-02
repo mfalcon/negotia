@@ -12,12 +12,12 @@ buyer_prompt = Prompt(
     prompt_id = 'buyer_0', 
     min_value = 700, 
     max_value = 1000,
+    negotiator_name = 'Pedro',
     product_name = item.name,
     product_type = item.category
 )
 
 buyer = Negotiator(
-    name = 'Jorge',
     side = 'buyer',
     prompt = buyer_prompt,
     llm_instance = LLMSelector(model_name='llama2:13b').llm_instance
@@ -27,12 +27,12 @@ seller_prompt = Prompt(
     prompt_id = 'seller_0', 
     min_value = 800, 
     max_value = 1200,
+    negotiator_name = 'Jorge',
     product_name = item.name,
     product_type = item.category
 )
 
 seller = Negotiator(
-    name = 'Cacho',
     side = 'seller',
     prompt = seller_prompt,
     llm_instance = LLMSelector(model_name='mixtral').llm_instance #get_llm_instance(model_name='neural-chat')

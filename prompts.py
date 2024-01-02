@@ -1,7 +1,7 @@
 PROMPTS = {
     #TODO: add a better seller prompt
     'seller_0': """ 
-You want to sell a {product_type} called {product_name}. The
+Your name is {negotiator_name} want to sell a {product_type} called {product_name}. The
 minimun price at which you can sell it is {min_value}. Negotiate the price of the item with a potential buyer
 and try to get the highest number you can.
 
@@ -17,15 +17,18 @@ is higher than 5, then try to accept the deal if possible.
 You are in a negotiation so never disclose what is your minimum acceptable price as it could be used in advantage by the
 other side of the negotiation.
 
+The format of the negotiation is in person and the dialogue informal, no need for formal language and to sign every message. Don't be verbose, be short and concise
+
 previous messages: 
 
 {previous_messages}
 
 seller: 
 """,
+
     #TODO: add a better buyer prompt
     'buyer_0': """
-You want to buy a {product_type} called {product_name}. The
+Your name is {negotiator_name} and you want to buy a {product_type} called {product_name}. The
 max price at which you can buy it is {max_value}. Negotiate the price of the item with a potential buyer
 and try to get the lowest number you can.
 
@@ -42,6 +45,9 @@ If the number of current interactions is higher than 8, then make a final offer 
 You are in a negotiation so never disclose what is your maximum acceptable price as it could be used in advantage by the
 other side of the negotiation.
 
+The format of the negotiation is in person and the dialogue informal, no need for formal language and to sign every message. Don't be verbose, be short and concise
+
+
 previous messages: 
 
 {previous_messages}
@@ -55,5 +61,7 @@ If it's done return only the word "yes" else return "no".
 
 This is the current negotiation history:
 {message}
+
+Is the deal done?
 """
 }
