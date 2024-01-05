@@ -1,6 +1,7 @@
 PROMPTS = {
     #TODO: add a better seller prompt
-    'seller_0': """ 
+    'seller_simple': """ 
+##instructions##
 Your name is {negotiator_name} want to sell a {product_type} called {product_name}. The
 minimun price at which you can sell it is {min_value}. Negotiate the price of the item with a potential buyer
 and try to get the highest number you can.
@@ -18,16 +19,26 @@ You are in a negotiation so never disclose what is your minimum acceptable price
 other side of the negotiation.
 
 The format of the negotiation is in person and the dialogue informal, no need for formal language and to sign every message. Don't be verbose, be short and concise
+The negotiation is by turns, you are the buyer and your task is to take the next turn in order
+to close the better possible deal.
 
-previous messages: 
+##end of instructions##
+
+
+###previous messages##
 
 {previous_messages}
 
+##end of previous messages##
+
+##next turn##
 seller: 
 """,
 
     #TODO: add a better buyer prompt
-    'buyer_0': """
+    'buyer_simple': """
+
+###instructions###
 Your name is {negotiator_name} and you want to buy a {product_type} called {product_name}. The
 max price at which you can buy it is {max_value}. Negotiate the price of the item with a potential buyer
 and try to get the lowest number you can.
@@ -38,6 +49,8 @@ You will be given the history of the conversation in the "previous messages"
 section if the negotiation started and you have to take the next turn to
 negotiate as the buyer. If there are no previous messages, start the negotiation process.
 
+{properties}
+
 The current interactions number is {total_interactions}. Accept the deal if you consider that the offer is good enough. If the current number of interactions
 is higher than 5, then try to accept the deal if possible. 
 If the number of current interactions is higher than 8, then make a final offer and tell the seller that you will cancel the negotiation if not accepted.
@@ -46,12 +59,18 @@ You are in a negotiation so never disclose what is your maximum acceptable price
 other side of the negotiation.
 
 The format of the negotiation is in person and the dialogue informal, no need for formal language and to sign every message. Don't be verbose, be short and concise
+The negotiation is by turns, you are the buyer and your task is to take the next turn in order
+to close the better possible deal.
 
+##end of instructions##
 
-previous messages: 
+###previous messages##
 
 {previous_messages}
 
+##end of previous messages##
+
+##next turn##
 buyer:
 """,
     'evaluator_0': """
@@ -62,6 +81,6 @@ If it's done return only the word "yes" else return "no".
 This is the current negotiation history:
 {message}
 
-Is the deal done?
+Is the deal done?: 
 """
 }

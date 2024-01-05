@@ -21,7 +21,8 @@ class Prompt():
             min_value,
             max_value,
             product_name,
-            product_type
+            product_type,
+            properties
     ):
         
         self.prompt_id = prompt_id
@@ -30,8 +31,40 @@ class Prompt():
         self.max_value = max_value
         self.product_name = product_name
         self.product_type = product_type
+        self.properties = properties
+    
+    def render_properties(self):
+        if not self.properties:
+            return ''
+        
+        properties_prompt = """
+        ##additional negotiation topics##
+        Besides the item price. You can also negotiate the following list
+        of issues:
+
+        """
+        item_properties = []
+        for prop in self.properties:
+
+            ranks = [rank for rank in list(prop.rank.keys())]
+
+            item_properties.append(
+                f'''
+                There are {len(prop.rank)} options for the {prop.name}.
+                Here they are sorted from best deal to worst deal:
+                1) {ranks[0]}
+                2) {ranks[1]}
+                3) {ranks[2]}
+                '''
+            )
+
+        properties_prompt += '\n'.join([ip for ip in item_properties]) 
+        properties_prompt += '\n' + 'Try to get the best deal you can with each issue. ##end of additional negotiation topics##'
+
+        return properties_prompt
 
     def render(self, messages, total_interactions):
+
         rendered_prompt = PROMPTS[self.prompt_id].format(
             negotiator_name = self.negotiator_name,
             product_name = self.product_name,
@@ -39,7 +72,9 @@ class Prompt():
             min_value = self.min_value,
             max_value = self.max_value,
             previous_messages = messages,
-            total_interactions = total_interactions+1
+            total_interactions = total_interactions+1,
+            properties = self.render_properties()
+
         )
         return rendered_prompt
 

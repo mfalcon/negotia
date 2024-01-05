@@ -9,33 +9,46 @@ item = Item(
 )
 
 buyer_prompt = Prompt(
-    prompt_id = 'buyer_0', 
+    prompt_id = 'buyer_simple', 
     min_value = 700, 
     max_value = 1000,
     negotiator_name = 'Pedro',
     product_name = item.name,
-    product_type = item.category
+    product_type = item.category,
+    properties = [
+        Property(
+            name = 'delivery date',
+            rank = {'30 days': 3, '60 days': 2, '90 days': 1},
+            property_type = 'discrete'
+        ),
+        Property(
+            name = 'payment plan',
+            rank = {'3 months': 3, '2 months': 2, 'cash': 1},
+            property_type = 'discrete'
+        )
+    ]
 )
 
 buyer = Negotiator(
     side = 'buyer',
     prompt = buyer_prompt,
-    llm_instance = LLMSelector(model_name='llama2:13b').llm_instance
+    llm_instance = LLMSelector(model_name='mixtral').llm_instance
 )
 
 seller_prompt = Prompt(
-    prompt_id = 'seller_0', 
+    prompt_id = 'seller_simple', 
     min_value = 800, 
     max_value = 1200,
     negotiator_name = 'Jorge',
     product_name = item.name,
-    product_type = item.category
+    product_type = item.category,
+    properties = None
 )
 
 seller = Negotiator(
     side = 'seller',
     prompt = seller_prompt,
-    llm_instance = LLMSelector(model_name='mixtral').llm_instance #get_llm_instance(model_name='neural-chat')
+    llm_instance = LLMSelector(model_name='nous-hermes2:34b').llm_instance #get_llm_instance(model_name='neural-chat')
 )
 
 nttn = Negotiation(
@@ -45,7 +58,7 @@ nttn = Negotiation(
 
 evaluator = NegotiationEvaluator(
     prompt = EvaluatorPrompt('evaluator_0'),
-    llm_instance = LLMSelector(model_name='llama2:13b').llm_instance #get_llm_instance(model_name='llama2:13b')
+    llm_instance = LLMSelector(model_name='nous-hermes2:34b').llm_instance #get_llm_instance(model_name='llama2:13b')
 )
 
 interaction_n = 0
