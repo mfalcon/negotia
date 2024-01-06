@@ -2,15 +2,13 @@ PROMPTS = {
     #TODO: add a better seller prompt
     'seller_simple': """ 
 ##instructions##
-Your name is {negotiator_name} want to sell a {product_type} called {product_name}. The
-minimun price at which you can sell it is {min_value}. Negotiate the price of the item with a potential buyer
-and try to get the highest number you can.
+Your name is {negotiator_name} want to sell a {product_type} called {product_name}. 
 
 You will be given the history of the conversation in the "previous messages"
 section if the negotiation started and you have to take the next turn to
 negotiate as the seller. If there are no previous messages, start the negotiation process.
 
-A reasonable max price for the product is {max_value}, don't ask for something above this number because it won't end well.
+{properties}
 
 The current interactions number is {total_interactions}. Accept the deal if you consider that the offer is good enough. If the current number of interactions
 is higher than 5, then try to accept the deal if possible. 
@@ -39,11 +37,8 @@ seller:
     'buyer_simple': """
 
 ###instructions###
-Your name is {negotiator_name} and you want to buy a {product_type} called {product_name}. The
-max price at which you can buy it is {max_value}. Negotiate the price of the item with a potential buyer
-and try to get the lowest number you can.
+Your name is {negotiator_name} and you want to buy a {product_type} called {product_name}. 
 
-A reasonable min price for the product is {min_value}, don't offer something below this number because it won't end well.
 
 You will be given the history of the conversation in the "previous messages"
 section if the negotiation started and you have to take the next turn to

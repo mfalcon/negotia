@@ -51,6 +51,7 @@ class OllamaRepository(LLM):
                 'temperature': 0
             }
         }
+
         response = requests.post(self.url, json=data)
 
         return response.json()['response']

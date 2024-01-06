@@ -25,6 +25,11 @@ buyer_prompt = Prompt(
             name = 'payment plan',
             rank = {'3 months': 3, '2 months': 2, 'cash': 1},
             property_type = 'discrete'
+        ),
+        Property(
+            name = 'item price',
+            rank = [('800', 1), ('1200', 10)],
+            property_type = 'minmax'
         )
     ]
 )
@@ -42,7 +47,23 @@ seller_prompt = Prompt(
     negotiator_name = 'Jorge',
     product_name = item.name,
     product_type = item.category,
-    properties = None
+    properties = [
+        Property(
+            name = 'delivery date',
+            rank = {'30 days': 1, '60 days': 2, '90 days': 3},
+            property_type = 'discrete'
+        ),
+        Property(
+            name = 'payment plan',
+            rank = {'3 months': 1, '2 months': 2, 'cash': 3},
+            property_type = 'discrete'
+        ),
+        Property(
+            name = 'item price',
+            rank = [('800', 1), ('1200', 10)],
+            property_type = 'minmax'
+        )
+    ]
 )
 
 seller = Negotiator(
