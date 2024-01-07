@@ -122,7 +122,7 @@ class Negotiator():
         self.llm_instance = llm_instance
 
 
-class Property(): #TODO: add extra negotiation properties to the negotiation
+class Property():
 
     def __init__(
             self,
@@ -133,7 +133,7 @@ class Property(): #TODO: add extra negotiation properties to the negotiation
         
         self.name = name
         self.rank = rank
-        self.property_type = property_type #positive/negative #TODO: add available categories
+        self.property_type = property_type
 
 
 class Item():

@@ -55,7 +55,3 @@ class OllamaRepository(LLM):
         response = requests.post(self.url, json=data)
 
         return response.json()['response']
-    
-def get_llm_instance(model_name): #TODO: refactor this instantiation
-    llm_instance = OllamaRepository(model_name = model_name)
-    return llm_instance
