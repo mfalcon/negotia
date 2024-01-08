@@ -37,7 +37,7 @@ buyer_prompt = Prompt(
 buyer = Negotiator(
     side = 'buyer',
     prompt = buyer_prompt,
-    llm_instance = LLMSelector(model_name='mixtral').llm_instance
+    llm_instance = LLMSelector(model_name='gpt-3.5-turbo-1106').llm_instance
 )
 
 seller_prompt = Prompt(
@@ -79,7 +79,7 @@ nttn = Negotiation(
 
 evaluator = NegotiationEvaluator(
     prompt = EvaluatorPrompt('evaluator_0'),
-    llm_instance = LLMSelector(model_name='nous-hermes2:34b').llm_instance
+    llm_instance = LLMSelector(model_name='gpt-3.5-turbo-1106').llm_instance
 )
 
 extractor = NegotiationEvaluator(
@@ -120,7 +120,7 @@ while interaction_n < nttn.max_interactions:
     
     if finished_negotiation == 'yes':
         import pdb; pdb.set_trace()
-        extraction_prompt = extractor.prompt.render(message=nttn.messages[-2])
+        extraction_prompt = extractor.prompt.render(message=nttn.messages)
         negotiation_points_by_topic = extractor.llm_instance.run(prompt=extraction_prompt)
         break
     

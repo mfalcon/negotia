@@ -28,13 +28,14 @@ class OpenAIRepository(LLM):
         response = self.client.chat.completions.create(
             messages=[
                 {
-                    "role": "user",
-                    "content": "Say this is a test",
+                    "role": "system",
+                    "content": prompt,
                 }
             ],
             model = self.model_name,
         )
-        return response[''] #TODO: complete this
+
+        return response.choices[0].message.content
 
 
 class OllamaRepository(LLM):
