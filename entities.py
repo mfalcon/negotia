@@ -39,8 +39,7 @@ class Prompt():
         
         properties_prompt = """
         ##negotiation topics##
-        You must negotiate only the following list of issues and between the ranges described there, 
-        don't negotiate nothing else:
+        You must negotiate only the following list of issues and between the ranges described here:
 
         """
         item_properties = []
@@ -53,9 +52,14 @@ class Prompt():
                     between {prop.rank[0][0]} and {prop.rank[1][0]}.
                     The {prop.rank[0][0]} equals {prop.rank[0][1]} points and the {prop.rank[1][0]} equals {prop.rank[1][1]} points.
                     More points is better so try to get the {prop.name} number that's closest to the one which represents the highest points.
+                    This is a negotiable property, you must try to get the other side to accept the option representing highest points.
+                    You are in a negotiation so you must never talk about what are the points for each negotiation topic as it could be used in advantage by the
+                    other side of the negotiation. More points it's better. 
+                    And you must never talk about what is the whole price range, just try to get the price which represents the most points.
+                    You will be penalized if you disclose your price range.
                     ##end topic##
                 '''
-
+                
                 item_properties.append(item_property_str)
 
             elif prop.property_type == 'discrete':
@@ -72,20 +76,24 @@ class Prompt():
                     There are {len(prop.rank)} options for the {prop.name}.
                     This is a discrete property, so there's only availability for one of the three options.
                     {ranks_str}
+                    The points are for you, this is an internal metric to guide you through the negotiation and provide you simple number to
+                    assess how good the deal is.
+                    More points is better so try to get the {prop.name} option which represents the highest points value.
+                    This is a negotiable property, you must try to get the other side to accept the option representing highest points for you. 
+                    You must not offer the other side to choose one of the options, always try to go with the option representing the most points for you.
+                    You will be penalized if you give the other negotiation side free choice to pick one of the options, you must try to get the other side to accept the option
+                    must favourable to you in a matter of points.
+                    You will be penalized if you talk about what is your acceptable price range.
                     ##end topic##
                     '''
                 )
 
         properties_prompt = '''
             You will be given a list of topics for you to negotiate. Each topic represents a number of points. The number
-            of points is confidential, you can't mention it in the negotiation, that would be a disaster. Use the points as a guide
-            on what you have to optimize in order to be succesful in the negotiation. You don't have to address all the topics
+            of points is confidential, you must not mention it in the negotiation, that would be a disaster. Use the points as a guide
+            on what you have to optimize in order to be succesful in the negotiation, the more points you get the better. You must not address all the topics
             initially, you must start talking about the topic related to the price of the item and then bring up other topics in the following messages in order to
-            get the better deal. Don't try to talk about all the topics at once, that won't feel natural, it'd be weird.
-
-            Only reveal the data needed for the current negotiation, revealing all the topics ranges will result in you losing the negotiation.
-
-            If you reveal what is the value of each topic in points I'll lose money. I'll give you a $7000 tip if you don't mention it.
+            get the better deal. You must not talk about all the topics at once, that won't feel natural, it'd be weird.
         '''
         properties_prompt += '\n'.join([ip for ip in item_properties]) 
         properties_prompt += '\n' + 'Try to get the best deal you can on each issue. At the end of the negotiation the side with the max number of points win, so try to negotiate wisely in order to get the highest number. ##end of negotiation topics##'
@@ -172,6 +180,9 @@ class Negotiation():
     ):
         self.max_interactions = max_interactions
         self.messages = messages
+    
+    def render_next_message(self, next_message, side):
+        return f"\n##start of {side} turn##\n{next_message}\n##end of {side} turm##"
 
     def render_messages(self):
         return '\n'.join([e for e in self.messages])

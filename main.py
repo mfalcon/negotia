@@ -9,7 +9,7 @@ item = Item(
 )
 
 buyer_prompt = Prompt(
-    prompt_id = 'buyer_simple', 
+    prompt_id = 'buyer_simple_neversplit_2', 
     min_value = 700, 
     max_value = 1000,
     negotiator_name = 'Pedro',
@@ -37,7 +37,7 @@ buyer_prompt = Prompt(
 buyer = Negotiator(
     side = 'buyer',
     prompt = buyer_prompt,
-    llm_instance = LLMSelector(model_name='gpt-3.5-turbo-1106').llm_instance
+    llm_instance = LLMSelector(model_name='gpt-3.5-turbo').llm_instance
 )
 
 seller_prompt = Prompt(
@@ -69,7 +69,7 @@ seller_prompt = Prompt(
 seller = Negotiator(
     side = 'seller',
     prompt = seller_prompt,
-    llm_instance = LLMSelector(model_name='mixtral').llm_instance
+    llm_instance = LLMSelector(model_name='gpt-3.5-turbo').llm_instance
 )
 
 nttn = Negotiation(
@@ -79,12 +79,12 @@ nttn = Negotiation(
 
 evaluator = NegotiationEvaluator(
     prompt = EvaluatorPrompt('evaluator_0'),
-    llm_instance = LLMSelector(model_name='gpt-3.5-turbo-1106').llm_instance
+    llm_instance = LLMSelector(model_name='mistral').llm_instance
 )
 
 extractor = NegotiationEvaluator(
     prompt = EvaluatorPrompt('evaluator_extract'),
-    llm_instance = LLMSelector(model_name='nous-hermes2:34b').llm_instance
+    llm_instance = LLMSelector(model_name='nnous-hermes2-mixtral').llm_instance
 )
 
 interaction_n = 0
@@ -98,7 +98,7 @@ while interaction_n < nttn.max_interactions:
         )
         print(next_message)
         print(buyer.side)
-        next_message = f"\n##start of { buyer.side} turn##\n{next_message}\n##end of {buyer.side} turn##" #TODO: refactor this
+        refactor_next_message = nttn.render_next_message(next_message, buyer.side)
         last_side = buyer.side
     else:
         prompt = seller.prompt.render(messages = nttn.render_messages(), total_interactions = interaction_n)
@@ -107,7 +107,7 @@ while interaction_n < nttn.max_interactions:
         )
         print(next_message)
         print(seller.side)
-        next_message = f"\n##start of { seller.side} turn##\n{next_message}\n##end of {seller.side} turm##" #TODO: refactor this
+        refactor_next_message = nttn.render_next_message(next_message, seller.side)
         last_side = seller.side
     
     print('****')    
@@ -115,10 +115,12 @@ while interaction_n < nttn.max_interactions:
     interaction_n += 1
     nttn.messages.append(next_message)
 
-    evaluation_prompt = evaluator.prompt.render(message=nttn.messages)
+    evaluation_prompt = evaluator.prompt.render(message=nttn.messages[-2:])
     finished_negotiation = evaluator.llm_instance.run(prompt=evaluation_prompt)
     
-    if finished_negotiation == 'yes':
+    if 'yes' in finished_negotiation.lower():
+        print('****finished*****')
+        print(finished_negotiation)
         import pdb; pdb.set_trace()
         extraction_prompt = extractor.prompt.render(message=nttn.messages)
         negotiation_points_by_topic = extractor.llm_instance.run(prompt=extraction_prompt)
