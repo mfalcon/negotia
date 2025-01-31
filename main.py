@@ -189,47 +189,27 @@ class AINegotiator:
     def _create_negotiation_prompt(self, current_terms: Dict[str, float], rounds_left: int) -> str:
         """Create a context-aware negotiation prompt."""
         role = "seller" if self.is_seller else "buyer"
-        urgency_level = "low" if rounds_left > 5 else "medium" if rounds_left > 2 else "high"
+        urgency_level = "low" if rounds_left > 5 else "medium" if rounds_left > 2 else "critical"
         
         urgency_context = {
-            "low": "You have time to negotiate, but keep moving towards an agreement.",
-            "medium": "Time is running short. Consider making larger concessions to reach a deal.",
-            "high": f"URGENT: Only {rounds_left} rounds left! Strongly consider accepting terms if they're within your constraints, even if not ideal."
+            "low": "Negotiate towards an agreement while protecting your interests.",
+            "medium": "Time is short - focus on reaching a deal with acceptable terms.",
+            "critical": f"FINAL ROUNDS! Accept any terms within your constraints or risk no deal at all!"
         }
 
-        # Calculate how close current terms are to constraints
-        terms_analysis = ""
+        # Check if terms are within constraints
+        terms_within_constraints = all(
+            self.constraints[term][0] <= current_terms[term] <= self.constraints[term][1]
+            for term in current_terms
+        )
+
+        terms_analysis = f"Current terms are {'within' if terms_within_constraints else 'outside'} your acceptable range.\n"
         if self.is_seller:
             price_gap = (self.constraints['price'][1] - current_terms['price']) / self.constraints['price'][1] * 100
-            terms_analysis = f"Current price is {price_gap:.0f}% below your maximum acceptable price."
+            terms_analysis += f"Price is {price_gap:.0f}% below your maximum."
         else:
             price_gap = (current_terms['price'] - self.constraints['price'][0]) / self.constraints['price'][0] * 100
-            terms_analysis = f"Current price is {price_gap:.0f}% above your minimum acceptable price."
-
-        role_context = {
-            "seller": {
-                "goal": "As the seller, maximize your profits while ensuring a deal is reached. Your constraints are:\n" +
-                       f"- Price range: ${self.constraints['price'][0]} to ${self.constraints['price'][1]}\n" +
-                       f"- Delivery time range: {self.constraints['delivery_time'][0]} to {self.constraints['delivery_time'][1]} days\n" +
-                       f"- Payment terms range: {self.constraints['payment_terms'][0]}% to {self.constraints['payment_terms'][1]}%",
-                "tactics": [
-                    "Start high but be ready to compromise",
-                    "Make larger concessions as time runs out",
-                    "Focus on reaching an agreement within your constraints"
-                ]
-            },
-            "buyer": {
-                "goal": "As the buyer, minimize costs while ensuring a deal is reached. Your constraints are:\n" +
-                       f"- Price range: ${self.constraints['price'][0]} to ${self.constraints['price'][1]}\n" +
-                       f"- Delivery time range: {self.constraints['delivery_time'][0]} to {self.constraints['delivery_time'][1]} days\n" +
-                       f"- Payment terms range: {self.constraints['payment_terms'][0]}% to {self.constraints['payment_terms'][1]}%",
-                "tactics": [
-                    "Start low but be ready to compromise",
-                    "Make larger concessions as time runs out",
-                    "Focus on reaching an agreement within your constraints"
-                ]
-            }
-        }
+            terms_analysis += f"Price is {price_gap:.0f}% above your minimum."
 
         prompt = f"""You are negotiating as the {role}. Keep your response under 150 words.
 
@@ -244,27 +224,34 @@ Status:
 - Note: {urgency_context[urgency_level]}
 - Analysis: {terms_analysis}
 
-Your constraints and goal: {role_context[role]['goal']}
+Your constraints:
+- Price: ${self.constraints['price'][0]} to ${self.constraints['price'][1]}
+- Delivery: {self.constraints['delivery_time'][0]} to {self.constraints['delivery_time'][1]} days
+- Payment: {self.constraints['payment_terms'][0]}% to {self.constraints['payment_terms'][1]}%
 
 Instructions:
-1. If terms are within your constraints and rounds are low (≤3), strongly consider accepting with:
-   "I accept these terms"
-   
-2. Otherwise, make a counter-proposal:
-   - Make larger concessions as rounds decrease
-   - Include specific numbers
-   - Keep it brief and direct
+{'ACCEPT THE DEAL if terms are within your constraints! Start response with "I accept these terms"' if rounds_left <= 2 and terms_within_constraints else 'Make a final counter-offer that you would accept' if rounds_left <= 2 else 'Make a counter-proposal with significant concessions'}
 
-Remember: No deal means both parties lose. As rounds decrease, prioritize reaching any acceptable deal over getting the best possible terms.
+Remember: A failed negotiation is worse than a less-than-perfect deal within your constraints.
 """
         return prompt
 
     def negotiate(self, current_terms: Dict[str, float]) -> Tuple[Dict[str, float], bool]:
-        """
-        Negotiate a single round based on current terms.
-        Returns: (proposed_terms, accepted)
-        """
+        """Negotiate a single round based on current terms."""
         rounds_left = self.max_rounds - len(self.conversation_history)
+        
+        # Auto-accept if in final rounds and terms are within constraints
+        if rounds_left <= 1:  # Force acceptance in the final round if terms are acceptable
+            terms_within_constraints = all(
+                self.constraints[term][0] <= current_terms[term] <= self.constraints[term][1]
+                for term in current_terms
+            )
+            if terms_within_constraints:
+                self.conversation_history.append(
+                    f"{'Seller' if self.is_seller else 'Buyer'}: I accept these terms as they are within my constraints."
+                )
+                return current_terms, True
+        
         prompt = self._create_negotiation_prompt(current_terms, rounds_left)
         response = self.ai_model.generate_text(prompt)
         
@@ -360,10 +347,9 @@ if __name__ == "__main__":
     seller = AINegotiator(
         name="Seller AI",
         is_seller=True,
-        repository_type="openai",
         constraints=seller_constraints,
-        model_name="gpt-4o-mini",
-        api_key=openai_api_key,
+        repository_type="open",
+        model_name="phi4",
         max_rounds=10
     )
 
@@ -371,9 +357,8 @@ if __name__ == "__main__":
         name="Buyer AI",
         is_seller=False,
         constraints=buyer_constraints,
-        repository_type="openai",
-        model_name="gpt-4o-mini",
-        api_key=openai_api_key,
+        repository_type="ollama",
+        model_name="phi4",
         max_rounds=10
     )
 
