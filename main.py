@@ -372,9 +372,10 @@ if __name__ == "__main__":
     seller = AINegotiator(
         name="Seller AI",
         is_seller=True,
+        repository_type="openai",
         constraints=seller_constraints,
-        repository_type="ollama",
-        model_name="phi4",
+        model_name="gpt-4o-mini",
+        api_key=openai_api_key,
         max_rounds=10
     )
 
@@ -382,8 +383,9 @@ if __name__ == "__main__":
         name="Buyer AI",
         is_seller=False,
         constraints=buyer_constraints,
-        repository_type="ollama",
-        model_name="phi4",
+        repository_type="openai",
+        model_name="gpt-4o-mini",
+        api_key=openai_api_key,
         max_rounds=10
     )
 
