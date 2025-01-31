@@ -189,85 +189,73 @@ class AINegotiator:
     def _create_negotiation_prompt(self, current_terms: Dict[str, float], rounds_left: int) -> str:
         """Create a context-aware negotiation prompt."""
         role = "seller" if self.is_seller else "buyer"
-        urgency_level = "low" if rounds_left > 10 else "medium" if rounds_left > 5 else "high"
+        urgency_level = "low" if rounds_left > 5 else "medium" if rounds_left > 2 else "high"
         
         urgency_context = {
-            "low": "Take your time to negotiate the best possible terms. Don't accept unless the deal is clearly in your favor.",
-            "medium": "While time is becoming a factor, don't rush to accept unfavorable terms. Keep negotiating for better conditions.",
-            "high": "Although time is running out, only accept if the terms are reasonably close to your goals. A bad deal is worse than no deal."
+            "low": "You have time to negotiate, but keep moving towards an agreement.",
+            "medium": "Time is running short. Consider making larger concessions to reach a deal.",
+            "high": f"URGENT: Only {rounds_left} rounds left! Strongly consider accepting terms if they're within your constraints, even if not ideal."
         }
+
+        # Calculate how close current terms are to constraints
+        terms_analysis = ""
+        if self.is_seller:
+            price_gap = (self.constraints['price'][1] - current_terms['price']) / self.constraints['price'][1] * 100
+            terms_analysis = f"Current price is {price_gap:.0f}% below your maximum acceptable price."
+        else:
+            price_gap = (current_terms['price'] - self.constraints['price'][0]) / self.constraints['price'][0] * 100
+            terms_analysis = f"Current price is {price_gap:.0f}% above your minimum acceptable price."
 
         role_context = {
             "seller": {
-                "goal": "As the seller, maximize your profits and minimize risks. Your ideal terms are:\n" +
-                       f"- Highest possible price (your minimum is ${self.constraints['price'][0]})\n" +
-                       f"- Longest possible delivery time (at least {self.constraints['delivery_time'][0]} days)\n" +
-                       f"- Maximum upfront payment (at least {self.constraints['payment_terms'][0]}%)",
+                "goal": "As the seller, maximize your profits while ensuring a deal is reached. Your constraints are:\n" +
+                       f"- Price range: ${self.constraints['price'][0]} to ${self.constraints['price'][1]}\n" +
+                       f"- Delivery time range: {self.constraints['delivery_time'][0]} to {self.constraints['delivery_time'][1]} days\n" +
+                       f"- Payment terms range: {self.constraints['payment_terms'][0]}% to {self.constraints['payment_terms'][1]}%",
                 "tactics": [
-                    "Start high and concede slowly",
-                    "Emphasize your product's quality, reliability, and unique value",
-                    "Highlight your costs, expertise, and market position",
-                    "Use scarcity or time pressure when appropriate",
-                    "Make small concessions to show flexibility"
+                    "Start high but be ready to compromise",
+                    "Make larger concessions as time runs out",
+                    "Focus on reaching an agreement within your constraints"
                 ]
             },
             "buyer": {
-                "goal": "As the buyer, minimize costs and secure favorable terms. Your ideal terms are:\n" +
-                       f"- Lowest possible price (your maximum is ${self.constraints['price'][1]})\n" +
-                       f"- Shortest possible delivery time (max {self.constraints['delivery_time'][1]} days)\n" +
-                       f"- Minimum upfront payment (max {self.constraints['payment_terms'][1]}%)",
+                "goal": "As the buyer, minimize costs while ensuring a deal is reached. Your constraints are:\n" +
+                       f"- Price range: ${self.constraints['price'][0]} to ${self.constraints['price'][1]}\n" +
+                       f"- Delivery time range: {self.constraints['delivery_time'][0]} to {self.constraints['delivery_time'][1]} days\n" +
+                       f"- Payment terms range: {self.constraints['payment_terms'][0]}% to {self.constraints['payment_terms'][1]}%",
                 "tactics": [
-                    "Start low and concede gradually",
-                    "Compare with market alternatives",
-                    "Question high prices and long delivery times",
-                    "Emphasize potential for long-term business",
-                    "Make small concessions to show good faith"
+                    "Start low but be ready to compromise",
+                    "Make larger concessions as time runs out",
+                    "Focus on reaching an agreement within your constraints"
                 ]
             }
         }
 
-        conversation_context = "\n".join(self.conversation_history[-4:]) if self.conversation_history else ""
-        
-        prompt = f"""You are negotiating as the {role}. Respond in first person, representing your role directly. Keep your response concise and under 150 words.
+        prompt = f"""You are negotiating as the {role}. Keep your response under 150 words.
 
 Current situation:
-- Current price: ${current_terms['price']}
+- Price: ${current_terms['price']}
 - Delivery time: {current_terms['delivery_time']} days
 - Upfront payment: {current_terms['payment_terms']}%
 
-Negotiation status:
-- Rounds remaining: {rounds_left} out of {self.max_rounds}
-- Urgency level: {urgency_level}
+Status:
+- Rounds left: {rounds_left} out of {self.max_rounds}
+- Urgency: {urgency_level}
 - Note: {urgency_context[urgency_level]}
+- Analysis: {terms_analysis}
 
-Your goal: {role_context[role]['goal']}
-
-Your negotiation tactics:
-{chr(10).join(f"- {tactic}" for tactic in role_context[role]['tactics'])}
-
-Previous conversation:
-{conversation_context}
+Your constraints and goal: {role_context[role]['goal']}
 
 Instructions:
-1. If you want to ACCEPT the current terms (only if they are very close to your goals), start your response with one of these exact phrases:
-   - "I accept these terms"
-   - "I agree to these terms"
-   - "Deal accepted"
+1. If terms are within your constraints and rounds are low (≤3), strongly consider accepting with:
+   "I accept these terms"
    
-2. If you want to continue negotiating (recommended unless terms are very favorable):
-   - Make a counter-proposal with specific numbers
-   - Justify your position strongly using first-person perspective ("I", "my", "we", "our")
-   - Include specific numbers for price, delivery time, and payment terms
-   - Make small, strategic concessions
-   - Use persuasion tactics to strengthen your position
+2. Otherwise, make a counter-proposal:
+   - Make larger concessions as rounds decrease
+   - Include specific numbers
+   - Keep it brief and direct
 
-Remember:
-- Speak in first person - you ARE the {role}
-- Be assertive and professional
-- Don't accept terms just because time is running out
-- Make calculated concessions based on your priorities
-- Use your negotiation tactics effectively
-- Only accept terms that are genuinely favorable to your side
+Remember: No deal means both parties lose. As rounds decrease, prioritize reaching any acceptable deal over getting the best possible terms.
 """
         return prompt
 
