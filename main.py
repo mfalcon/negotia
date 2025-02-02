@@ -36,9 +36,10 @@ class OllamaRepository(AIRepository):
 class OpenAIRepository(AIRepository):
     def __init__(self, model_name: str, api_key: str = None):
         self.model_name = model_name
-        self.client = openai.OpenAI(api_key=api_key or os.getenv('OPENAI_API_KEY'))
+        # Check for API key before initializing client
         if not (api_key or os.getenv('OPENAI_API_KEY')):
             raise ValueError("OpenAI API key must be provided either through environment variable OPENAI_API_KEY or as a parameter")
+        self.client = openai.OpenAI(api_key=api_key or os.getenv('OPENAI_API_KEY'))
 
     def run(self, prompt: str) -> str:
         response = self.client.chat.completions.create(
@@ -46,8 +47,6 @@ class OpenAIRepository(AIRepository):
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            #temperature=0,
-            #max_tokens=250
         )
         return response.choices[0].message.content
 

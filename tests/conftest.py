@@ -22,6 +22,9 @@ def buyer_constraints():
 def mock_seller(seller_constraints):
     seller = MagicMock()
     seller.constraints = seller_constraints
+    # Create the full mock structure
+    seller.ai_model = MagicMock()
+    seller.ai_model.repository = MagicMock()
     seller.ai_model.repository.model_name = "test-model"
     return seller
 
@@ -29,5 +32,8 @@ def mock_seller(seller_constraints):
 def mock_buyer(buyer_constraints):
     buyer = MagicMock()
     buyer.constraints = buyer_constraints
+    # Create the full mock structure
+    buyer.ai_model = MagicMock()
+    buyer.ai_model.repository = MagicMock()
     buyer.ai_model.repository.model_name = "test-model"
     return buyer 
