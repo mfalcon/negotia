@@ -1,64 +1,48 @@
-import unittest
+import pytest
 from unittest.mock import patch, MagicMock
-from main import AIRepository, OllamaRepository, OpenAIRepository
+from main import OllamaRepository, OpenAIRepository
 
-class TestOllamaRepository(unittest.TestCase):
-    def setUp(self):
-        self.repository = OllamaRepository("test-model")
-
-    @patch('requests.post')
-    def test_run_success(self, mock_post):
-        # Setup mock response
+def test_ollama_run_success():
+    repository = OllamaRepository("test-model")
+    
+    with patch('requests.post') as mock_post:
         mock_response = MagicMock()
         mock_response.json.return_value = {"response": "test response"}
         mock_post.return_value = mock_response
-
-        # Test the run method
-        result = self.repository.run("test prompt")
         
-        # Verify the result
-        self.assertEqual(result, "test response")
+        result = repository.run("test prompt")
         
-        # Verify the API was called correctly
+        assert result == "test response"
         mock_post.assert_called_once()
         call_args = mock_post.call_args[1]
-        self.assertEqual(call_args['json']['model'], "test-model")
-        self.assertEqual(call_args['json']['prompt'], "test prompt")
+        assert call_args['json']['model'] == "test-model"
+        assert call_args['json']['prompt'] == "test prompt"
 
-    @patch('requests.post')
-    def test_run_error(self, mock_post):
-        # Setup mock to raise an exception
+def test_ollama_run_error():
+    repository = OllamaRepository("test-model")
+    
+    with patch('requests.post') as mock_post:
         mock_post.side_effect = Exception("API Error")
+        
+        with pytest.raises(Exception):
+            repository.run("test prompt")
 
-        # Test the run method with error
-        with self.assertRaises(Exception):
-            self.repository.run("test prompt")
+def test_openai_init_without_api_key():
+    with patch.dict('os.environ', clear=True):
+        with pytest.raises(ValueError):
+            OpenAIRepository("test-model")
 
-class TestOpenAIRepository(unittest.TestCase):
-    def setUp(self):
-        self.api_key = "test-key"
-        self.repository = OpenAIRepository("test-model", self.api_key)
-
-    def test_init_without_api_key(self):
-        # Test initialization without API key
-        with patch.dict('os.environ', clear=True):
-            with self.assertRaises(ValueError):
-                OpenAIRepository("test-model")
-
-    @patch('openai.OpenAI')
-    def test_run_success(self, mock_openai):
-        # Setup mock response
+def test_openai_run_success():
+    with patch('openai.OpenAI') as mock_openai:
+        repository = OpenAIRepository("test-model", "test-key")
+        
         mock_client = MagicMock()
         mock_openai.return_value = mock_client
         mock_completion = MagicMock()
         mock_completion.choices[0].message.content = "test response"
         mock_client.chat.completions.create.return_value = mock_completion
-
-        # Test the run method
-        result = self.repository.run("test prompt")
         
-        # Verify the result
-        self.assertEqual(result, "test response")
+        result = repository.run("test prompt")
         
-        # Verify the API was called correctly
+        assert result == "test response"
         mock_client.chat.completions.create.assert_called_once() 
