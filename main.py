@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 import openai
 import time
 import os
+from datetime import datetime
 
 class AIRepository(ABC):
     @abstractmethod
@@ -28,7 +29,7 @@ class OllamaRepository(AIRepository):
                 'num_predict': 250,
             }
         }
-
+        
         response = requests.post(self.url, json=data)
         return response.json()['response']
 
@@ -45,8 +46,8 @@ class OpenAIRepository(AIRepository):
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            temperature=0,
-            max_tokens=250
+            #temperature=0,
+            #max_tokens=250
         )
         return response.choices[0].message.content
 
@@ -191,25 +192,52 @@ class AINegotiator:
         role = "seller" if self.is_seller else "buyer"
         urgency_level = "low" if rounds_left > 5 else "medium" if rounds_left > 2 else "critical"
         
-        urgency_context = {
-            "low": "Negotiate towards an agreement while protecting your interests.",
-            "medium": "Time is short - focus on reaching a deal with acceptable terms.",
-            "critical": f"FINAL ROUNDS! Accept any terms within your constraints or risk no deal at all!"
-        }
-
-        # Check if terms are within constraints
-        terms_within_constraints = all(
-            self.constraints[term][0] <= current_terms[term] <= self.constraints[term][1]
-            for term in current_terms
-        )
-
-        terms_analysis = f"Current terms are {'within' if terms_within_constraints else 'outside'} your acceptable range.\n"
         if self.is_seller:
-            price_gap = (self.constraints['price'][1] - current_terms['price']) / self.constraints['price'][1] * 100
-            terms_analysis += f"Price is {price_gap:.0f}% below your maximum."
+            # Enhanced seller prompt with "Never Split the Difference" techniques
+            urgency_context = {
+                "low": "Use tactical empathy while anchoring high. Focus on value creation and loss prevention.",
+                "medium": "Create urgency through calculated questions about the cost of delay.",
+                "critical": "Use 'that's right' moments to build agreement, then push for final terms within your constraints."
+            }
+
+            # Calculate the ideal target price (slightly below maximum to leave room for negotiation)
+            target_price = self.constraints['price'][1] * 0.95
+            current_price_gap = ((target_price - current_terms['price']) / target_price) * 100
+
+            negotiation_tactics = f"""
+Key negotiation tactics to use:
+1. Mirror their concerns using their own words
+2. Label emotions: "It seems like..." or "It sounds like..."
+3. Use calibrated questions starting with 'How' or 'What'
+4. Create urgency by highlighting potential losses
+5. Focus on value creation, not just price
+
+Current situation analysis:
+- Price gap: {current_price_gap:.1f}% below target
+- Time pressure: {urgency_level}
+- Buyer's likely concerns: cost, delivery reliability, payment flexibility
+
+Negotiation guidelines:
+1. If price is mentioned, always anchor back to value and quality
+2. Use "fair" strategically: "We want to find a fair solution that works for both parties"
+3. Let them feel in control while guiding to your target
+4. Use silence after making key points
+5. If they push back, respond with "How am I supposed to do that?" or "What are we trying to solve for?"
+
+Remember:
+- Never split the difference immediately
+- Use "no" to your advantage - it starts the real negotiation
+- Make them solve your problems
+- The person across the table is never the problem; the situation is the problem
+"""
         else:
-            price_gap = (current_terms['price'] - self.constraints['price'][0]) / self.constraints['price'][0] * 100
-            terms_analysis += f"Price is {price_gap:.0f}% above your minimum."
+            # Original buyer context
+            urgency_context = {
+                "low": "Negotiate towards an agreement while protecting your interests.",
+                "medium": "Time is short - focus on reaching a deal with acceptable terms.",
+                "critical": f"FINAL ROUNDS! Accept any terms within your constraints or risk no deal at all!"
+            }
+            negotiation_tactics = ""
 
         prompt = f"""You are negotiating as the {role}. Keep your response under 150 words.
 
@@ -222,17 +250,27 @@ Status:
 - Rounds left: {rounds_left} out of {self.max_rounds}
 - Urgency: {urgency_level}
 - Note: {urgency_context[urgency_level]}
-- Analysis: {terms_analysis}
 
 Your constraints:
 - Price: ${self.constraints['price'][0]} to ${self.constraints['price'][1]}
 - Delivery: {self.constraints['delivery_time'][0]} to {self.constraints['delivery_time'][1]} days
 - Payment: {self.constraints['payment_terms'][0]}% to {self.constraints['payment_terms'][1]}%
 
+{negotiation_tactics if self.is_seller else ""}
+
 Instructions:
-{'ACCEPT THE DEAL if terms are within your constraints! Start response with "I accept these terms"' if rounds_left <= 2 and terms_within_constraints else 'Make a final counter-offer that you would accept' if rounds_left <= 2 else 'Make a counter-proposal with significant concessions'}
+{'ACCEPT THE DEAL if terms are within your constraints! Start response with "I accept these terms"' if rounds_left <= 2 and all(
+    self.constraints[term][0] <= current_terms[term] <= self.constraints[term][1]
+    for term in current_terms
+) else 'Make a final counter-offer that you would accept' if rounds_left <= 2 else 'Make a counter-proposal using the negotiation tactics'}
 
 Remember: A failed negotiation is worse than a less-than-perfect deal within your constraints.
+
+If you're the seller, structure your response like this:
+1. Show empathy/understanding of their position
+2. Ask a calibrated question or highlight value
+3. Make your counter-proposal
+4. End with a non-threatening observation about mutual benefit
 """
         return prompt
 
@@ -279,8 +317,76 @@ Remember: A failed negotiation is worse than a less-than-perfect deal within you
         
         return proposed_terms, accepted
 
+class NegotiationLogger:
+    def __init__(self, seller: AINegotiator, buyer: AINegotiator):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.filename = f"negotiation_{timestamp}.txt"
+        self.seller = seller
+        self.buyer = buyer
+        
+        # Initialize the log file with header and configurations
+        with open(self.filename, "w") as f:
+            self._write_header(f)
+            self._write_configurations(f)
+            f.write("\n=== Negotiation Start ===\n")
+    
+    def _write_header(self, f):
+        f.write(f"=== Negotiation Log - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n\n")
+    
+    def _write_configurations(self, f):
+        f.write("=== Negotiator Configurations ===\n")
+        for negotiator, role in [(self.seller, "Seller"), (self.buyer, "Buyer")]:
+            f.write(f"\n{role} Configuration:\n")
+            f.write(f"- Model: {negotiator.ai_model.repository.model_name}\n")
+            f.write(f"- Repository Type: {type(negotiator.ai_model.repository).__name__}\n")
+            f.write(f"- Constraints: {negotiator.constraints}\n")
+            f.write(f"- Max Rounds: {negotiator.max_rounds}\n")
+    
+    def log_initial_terms(self, terms: Dict[str, float]):
+        with open(self.filename, "a") as f:
+            f.write(f"\nInitial terms: Price=${terms['price']}, "
+                   f"Delivery={terms['delivery_time']} days, "
+                   f"Payment={terms['payment_terms']}% upfront\n")
+    
+    def log_round(self, round_num: int):
+        with open(self.filename, "a") as f:
+            f.write(f"\n--- Round {round_num} ---\n")
+    
+    def log_message(self, role: str, message: str):
+        with open(self.filename, "a") as f:
+            f.write(f"\n{role}: {message}\n")
+    
+    def log_deal_reached(self, role: str, terms: Dict[str, float], 
+                        seller_constraints: Dict[str, Tuple[float, float]], 
+                        buyer_constraints: Dict[str, Tuple[float, float]]):
+        with open(self.filename, "a") as f:
+            f.write(f"\n[Deal reached: {role} accepted the terms]\n")
+            
+            # Write final evaluation
+            evaluator = NegotiationEvaluator(seller_constraints, buyer_constraints)
+            evaluation = evaluator.evaluate(terms)
+            f.write("\n=== Final Evaluation ===\n")
+            for eval_role, result in evaluation.items():
+                f.write(f"\n{eval_role.capitalize()}:\n")
+                f.write(f"- Scores: {result['scores']}\n")
+                f.write(f"- Average Score: {result['average_score']:.2f}\n")
+                f.write(f"- Comment: {result['comment']}\n")
+    
+    def log_warning(self, rounds_remaining: int):
+        warning_msg = f"\n[Warning: {rounds_remaining} rounds remaining]"
+        with open(self.filename, "a") as f:
+            f.write(warning_msg + "\n")
+    
+    def log_negotiation_failed(self, final_terms: Dict[str, float]):
+        with open(self.filename, "a") as f:
+            f.write("\n[Negotiation failed: No deal reached]\n")
+            f.write("\n=== Final State ===\n")
+            f.write(f"Last proposed terms: {final_terms}\n")
+
 def negotiate(seller: AINegotiator, buyer: AINegotiator) -> Dict[str, float]:
     """Simulate a negotiation between seller and buyer."""
+    logger = NegotiationLogger(seller, buyer)
+    
     max_rounds = min(seller.max_rounds, buyer.max_rounds)
     rounds_remaining = max_rounds
     
@@ -290,27 +396,34 @@ def negotiate(seller: AINegotiator, buyer: AINegotiator) -> Dict[str, float]:
         "payment_terms": (seller.constraints["payment_terms"][0] + buyer.constraints["payment_terms"][1]) / 2
     }
 
+    logger.log_initial_terms(current_terms)
     print("\nNegotiation Starting...")
     print(f"Initial terms: Price=${current_terms['price']}, Delivery={current_terms['delivery_time']} days, Payment={current_terms['payment_terms']}% upfront")
     
     while rounds_remaining > 0:
-        print(f"\n--- Round {max_rounds - rounds_remaining + 1} ---")
+        round_num = max_rounds - rounds_remaining + 1
+        logger.log_round(round_num)
+        print(f"\n--- Round {round_num} ---")
         
         # Seller's turn
         seller_proposal, seller_accepted = seller.negotiate(current_terms)
         seller_message = seller.conversation_history[-1].split(": ", 1)[1]
+        logger.log_message("Seller", seller_message)
         print(f"\nSeller: {seller_message}")
         
         if seller_accepted:
+            logger.log_deal_reached("Seller", current_terms, seller.constraints, buyer.constraints)
             print("\n[Deal reached: Seller accepted the terms]")
             return current_terms
             
         # Buyer's turn
         buyer_proposal, buyer_accepted = buyer.negotiate(seller_proposal)
         buyer_message = buyer.conversation_history[-1].split(": ", 1)[1]
+        logger.log_message("Buyer", buyer_message)
         print(f"\nBuyer: {buyer_message}")
         
         if buyer_accepted:
+            logger.log_deal_reached("Buyer", seller_proposal, seller.constraints, buyer.constraints)
             print("\n[Deal reached: Buyer accepted the terms]")
             return seller_proposal
 
@@ -318,10 +431,12 @@ def negotiate(seller: AINegotiator, buyer: AINegotiator) -> Dict[str, float]:
         rounds_remaining -= 1
         
         if rounds_remaining <= 5:
+            logger.log_warning(rounds_remaining)
             print(f"\n[Warning: {rounds_remaining} rounds remaining]")
             
         time.sleep(1)
 
+    logger.log_negotiation_failed(current_terms)
     print("\n[Negotiation failed: No deal reached]")
     return None
 
@@ -348,8 +463,9 @@ if __name__ == "__main__":
         name="Seller AI",
         is_seller=True,
         constraints=seller_constraints,
-        repository_type="open",
-        model_name="phi4",
+        repository_type="openai",
+        model_name='gpt-4o-mini',
+        api_key=openai_api_key,
         max_rounds=10
     )
 
@@ -357,8 +473,9 @@ if __name__ == "__main__":
         name="Buyer AI",
         is_seller=False,
         constraints=buyer_constraints,
-        repository_type="ollama",
-        model_name="phi4",
+        repository_type="openai",
+        model_name='gpt-4o',
+        api_key=openai_api_key,
         max_rounds=10
     )
 
