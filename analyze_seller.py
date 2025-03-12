@@ -35,19 +35,8 @@ def analyze_seller_negotiation(filename: str, api_key: str = None):
     deal_acceptor = re.search(r'\[Deal reached: (.*?) accepted', content)
     deal_acceptor = deal_acceptor.group(1) if deal_acceptor else "None"
     
-    # Extract final terms if deal was reached
-    final_terms = {}
-    if deal_reached:
-        price_match = re.search(r'Price=\$(\d+(?:\.\d+)?)', content)
-        delivery_match = re.search(r'Delivery=(\d+(?:\.\d+)?)', content)
-        payment_match = re.search(r'Payment=(\d+(?:\.\d+)?)', content)
-        
-        if price_match:
-            final_terms['price'] = float(price_match.group(1))
-        if delivery_match:
-            final_terms['delivery_time'] = float(delivery_match.group(1))
-        if payment_match:
-            final_terms['payment_terms'] = float(payment_match.group(1))
+    # Extract final terms
+    final_terms = extract_final_terms(content)
     
     # Prepare the prompt for the LLM
     system_prompt = """
@@ -146,16 +135,58 @@ def analyze_seller_negotiation(filename: str, api_key: str = None):
     # Print the report to console
     print("\n".join(report))
     
-    # Save the report to a file
+    # Save the report to a file in the data directory
+    os.makedirs("data", exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_filename = os.path.basename(filename)
     base_name = os.path.splitext(base_filename)[0]
-    output_filename = f"seller_analysis_{base_name}_{timestamp}.txt"
+    output_filename = f"data/seller_analysis_{base_name}_{timestamp}.txt"
     
     with open(output_filename, 'w') as f:
         f.write("\n".join(report))
     
     print(f"\nAnalysis saved to: {output_filename}")
+
+def extract_final_terms(content: str) -> Dict[str, float]:
+    """Extract the final terms from the negotiation log."""
+    # Look for the Final Terms section in a more robust way
+    final_terms_match = re.search(r"Final Terms: \{([^}]+)\}", content)
+    
+    if final_terms_match:
+        # Extract the dictionary-like string
+        terms_str = final_terms_match.group(1)
+        
+        # Parse the terms
+        terms_dict = {}
+        
+        # Extract price
+        price_match = re.search(r"'price': ([0-9.]+)", terms_str)
+        if price_match:
+            terms_dict['price'] = float(price_match.group(1))
+        
+        # Extract delivery time
+        delivery_match = re.search(r"'delivery_time': ([0-9.]+)", terms_str)
+        if delivery_match:
+            terms_dict['delivery_time'] = float(delivery_match.group(1))
+        
+        # Extract payment terms
+        payment_match = re.search(r"'payment_terms': ([0-9.]+)", terms_str)
+        if payment_match:
+            terms_dict['payment_terms'] = float(payment_match.group(1))
+        
+        return terms_dict
+    
+    # Try alternative format
+    alt_match = re.search(r"\[Deal reached:.*?\]\s*\n\s*Final Terms:\s*Price=\$([0-9.]+),\s*Delivery=([0-9.]+)\s*days,\s*Payment=([0-9.]+)%", content, re.DOTALL)
+    if alt_match:
+        return {
+            'price': float(alt_match.group(1)),
+            'delivery_time': float(alt_match.group(2)),
+            'payment_terms': float(alt_match.group(3))
+        }
+    
+    # If no final terms found, return empty dict
+    return {}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

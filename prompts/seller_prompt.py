@@ -2,12 +2,12 @@ from .base_prompt import create_base_prompt
 
 def get_seller_prompt(current_terms, rounds_left, constraints, current_price_gap):
     """Get the seller's negotiation prompt."""
-    urgency_level = "low" if rounds_left > 5 else "medium" if rounds_left > 2 else "critical"
+    urgency_level = "medium" if rounds_left > 5 else "critical"
     
     urgency_context = {
         "low": "Use tactical empathy while anchoring high. Create scarcity and competition pressure.",
         "medium": "Leverage time pressure and competition. Focus on value and what they might lose.",
-        "critical": "Use 'that's right' moments and final call tactics to push for closure."
+        "critical": "Use final call tactics to push for closure."
     }
 
     negotiation_tactics = f"""

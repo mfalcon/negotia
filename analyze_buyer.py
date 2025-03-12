@@ -8,156 +8,207 @@ from datetime import datetime
 
 def analyze_buyer_negotiation(filename: str, api_key: str = None):
     """
-    Analyze the buyer's negotiation techniques from a negotiation log file using an LLM.
+    Analyze a buyer's negotiation log and provide insights.
     
     Args:
         filename: Path to the negotiation log file
-        api_key: OpenAI API key (optional, will use environment variable if not provided)
+        api_key: OpenAI API key (optional)
     """
-    if not os.path.exists(filename):
-        print(f"Error: File {filename} not found.")
-        return
-    
     # Set up OpenAI client
     if api_key:
-        client = openai.OpenAI(api_key=api_key)
-    else:
-        client = openai.OpenAI()  # Uses OPENAI_API_KEY environment variable
+        openai.api_key = api_key
     
+    # Read the negotiation log
     with open(filename, 'r') as f:
-        content = f.read()
+        log_content = f.read()
     
-    # Extract buyer messages
-    buyer_messages = re.findall(r'Buyer: (.*?)(?=\n\n|\n\[|\Z)', content, re.DOTALL)
+    # Extract the final terms from the log
+    final_terms = extract_final_terms(log_content)
     
-    # Check if deal was reached
-    deal_reached = "Deal reached" in content
-    deal_acceptor = re.search(r'\[Deal reached: (.*?) accepted', content)
-    deal_acceptor = deal_acceptor.group(1) if deal_acceptor else "None"
+    # Extract the buyer's constraints
+    buyer_constraints = extract_buyer_constraints(log_content)
     
-    # Extract final terms if deal was reached
-    final_terms = {}
-    if deal_reached:
-        price_match = re.search(r'Price=\$(\d+(?:\.\d+)?)', content)
-        delivery_match = re.search(r'Delivery=(\d+(?:\.\d+)?)', content)
-        payment_match = re.search(r'Payment=(\d+(?:\.\d+)?)', content)
-        
-        if price_match:
-            final_terms['price'] = float(price_match.group(1))
-        if delivery_match:
-            final_terms['delivery_time'] = float(delivery_match.group(1))
-        if payment_match:
-            final_terms['payment_terms'] = float(payment_match.group(1))
+    # Extract the conversation
+    conversation = extract_conversation(log_content)
     
-    # Prepare the prompt for the LLM
-    system_prompt = """
-    You are an expert negotiation analyst specializing in evaluating buyer negotiation techniques.
-    Analyze the provided negotiation messages from a buyer and evaluate their negotiation skills.
-    Focus on identifying negotiation techniques such as:
+    # Analyze the negotiation
+    analysis = analyze_negotiation(conversation, final_terms, buyer_constraints)
     
-    1. Anchoring
-    2. Mentioning alternatives
-    3. Leveraging budget constraints
-    4. Managing urgency
-    5. Questioning value
-    6. Building relationships
-    7. Using volume leverage
-    8. Making market comparisons
-    9. Using calibrated questions
-    10. Seeking concessions
-    11. Constraint handling (without revealing actual constraints)
-    12. Showing empathy
-    13. Demonstrating patience
-    14. Bundling requests
-    
-    Also identify any weaknesses such as:
-    1. Revealing actual constraints
-    2. Showing desperation
-    3. Failing to question value
-    4. Not mentioning alternatives
-    5. Lacking empathy
-    
-    Provide your analysis in JSON format with the following structure:
-    {
-        "techniques_used": [{"technique": "name", "count": number, "example": "example text"}],
-        "strengths": ["description"],
-        "weaknesses": ["description"],
-        "effectiveness_score": number (0-100),
-        "overall_assessment": "text",
-        "improvement_suggestions": ["suggestion"]
-    }
-    """
-    
-    user_prompt = f"""
-    Here are the messages from a buyer in a negotiation:
-    
-    {json.dumps(buyer_messages)}
-    
-    Analyze these messages and evaluate the buyer's negotiation techniques.
-    """
-    
-    # Call the LLM for analysis
-    response = client.chat.completions.create(
-        model="gpt-4o",  # Use an appropriate model
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        response_format={"type": "json_object"}
-    )
-    
-    # Parse the response
-    try:
-        analysis = json.loads(response.choices[0].message.content)
-    except json.JSONDecodeError:
-        print("Error: Could not parse LLM response as JSON.")
-        print(response.choices[0].message.content)
-        return
-    
-    # Generate report text
-    report = []
-    report.append("===== BUYER NEGOTIATION ANALYSIS =====")
-    report.append(f"File analyzed: {filename}")
-    report.append(f"Number of messages: {len(buyer_messages)}")
-    report.append(f"Deal reached: {deal_reached}")
-    if deal_reached:
-        report.append(f"Deal accepted by: {deal_acceptor}")
-        report.append(f"Final terms: {final_terms}")
-    
-    report.append("\n--- NEGOTIATION TECHNIQUES USED ---")
-    for technique in analysis.get("techniques_used", []):
-        report.append(f"- {technique['technique']}: {technique['count']} instances")
-        report.append(f"  Example: \"{technique['example']}\"")
-    
-    report.append("\n--- STRENGTHS ---")
-    for strength in analysis.get("strengths", []):
-        report.append(f"✓ {strength}")
-    
-    report.append("\n--- WEAKNESSES ---")
-    for weakness in analysis.get("weaknesses", []):
-        report.append(f"✗ {weakness}")
-    
-    report.append("\n--- OVERALL ASSESSMENT ---")
-    report.append(f"Effectiveness score: {analysis.get('effectiveness_score', 0)}/100")
-    report.append(analysis.get("overall_assessment", "No assessment provided."))
-    
-    report.append("\n--- IMPROVEMENT SUGGESTIONS ---")
-    for suggestion in analysis.get("improvement_suggestions", []):
-        report.append(f"- {suggestion}")
-    
-    # Print the report to console
-    print("\n".join(report))
-    
-    # Save the report to a file
+    # Save the analysis to a file in the data directory
+    os.makedirs("data", exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_filename = os.path.basename(filename)
     base_name = os.path.splitext(base_filename)[0]
-    output_filename = f"buyer_analysis_{base_name}_{timestamp}.txt"
+    output_filename = f"data/buyer_analysis_{base_name}_{timestamp}.txt"
     
     with open(output_filename, 'w') as f:
-        f.write("\n".join(report))
+        f.write(analysis)
     
     print(f"\nAnalysis saved to: {output_filename}")
+
+def extract_final_terms(log_content: str) -> Dict:
+    """Extract the final terms from the negotiation log."""
+    # First try the dictionary format
+    final_terms_match = re.search(r"Final Terms: \{([^}]+)\}", log_content)
+    
+    if final_terms_match:
+        # Extract the dictionary-like string
+        terms_str = final_terms_match.group(1)
+        
+        # Parse the terms
+        terms_dict = {}
+        
+        # Extract price
+        price_match = re.search(r"'price': ([0-9.]+)", terms_str)
+        if price_match:
+            terms_dict['price'] = float(price_match.group(1))
+        
+        # Extract delivery time
+        delivery_match = re.search(r"'delivery_time': ([0-9.]+)", terms_str)
+        if delivery_match:
+            terms_dict['delivery_time'] = float(delivery_match.group(1))
+        
+        # Extract payment terms
+        payment_match = re.search(r"'payment_terms': ([0-9.]+)", terms_str)
+        if payment_match:
+            terms_dict['payment_terms'] = float(payment_match.group(1))
+        
+        return terms_dict
+    
+    # Try the older format
+    old_format_match = re.search(r"Negotiation successful! Final terms:\s*Price: \$([0-9.]+)\s*Delivery time: ([0-9.]+) days\s*Payment terms: ([0-9.]+)%", log_content)
+    
+    if old_format_match:
+        return {
+            "price": float(old_format_match.group(1)),
+            "delivery_time": float(old_format_match.group(2)),
+            "payment_terms": float(old_format_match.group(3))
+        }
+    
+    # Try another alternative format
+    alt_match = re.search(r"\[Deal reached:.*?\]\s*\n\s*Final Terms:\s*Price=\$([0-9.]+),\s*Delivery=([0-9.]+)\s*days,\s*Payment=([0-9.]+)%", log_content, re.DOTALL)
+    if alt_match:
+        return {
+            'price': float(alt_match.group(1)),
+            'delivery_time': float(alt_match.group(2)),
+            'payment_terms': float(alt_match.group(3))
+        }
+    
+    # If no final terms found (negotiation failed), return None
+    return None
+
+def extract_buyer_constraints(log_content: str) -> Dict:
+    """Extract the buyer's constraints from the negotiation log."""
+    # Look for the buyer constraints section
+    constraints_match = re.search(r"Buyer's constraints:\s*- Price: \$([0-9.]+) to \$([0-9.]+)\s*- Delivery time: ([0-9.]+) to ([0-9.]+) days\s*- Payment terms: ([0-9.]+)% to ([0-9.]+)%", log_content)
+    
+    if constraints_match:
+        return {
+            "price": (float(constraints_match.group(1)), float(constraints_match.group(2))),
+            "delivery_time": (float(constraints_match.group(3)), float(constraints_match.group(4))),
+            "payment_terms": (float(constraints_match.group(5)), float(constraints_match.group(6)))
+        }
+    
+    return None
+
+def extract_conversation(log_content: str) -> List[Dict]:
+    """Extract the conversation from the negotiation log."""
+    # Extract all buyer and seller messages
+    messages = []
+    
+    # Find all rounds in the log
+    rounds = re.findall(r"=== Round (\d+) ===\s*(.*?)(?==== Round \d+|Negotiation successful|No deal reached)", log_content, re.DOTALL)
+    
+    for round_num, round_content in rounds:
+        # Extract seller and buyer messages in this round
+        seller_match = re.search(r"Seller: (.*?)(?=\nBuyer:|$)", round_content)
+        buyer_match = re.search(r"Buyer: (.*?)(?=\n|$)", round_content)
+        
+        if seller_match:
+            messages.append({"role": "seller", "message": seller_match.group(1).strip()})
+        
+        if buyer_match:
+            messages.append({"role": "buyer", "message": buyer_match.group(1).strip()})
+    
+    return messages
+
+def analyze_negotiation(conversation: List[Dict], final_terms: Dict, buyer_constraints: Dict) -> str:
+    """
+    Analyze the negotiation using OpenAI.
+    
+    Args:
+        conversation: List of conversation messages
+        final_terms: Final negotiation terms
+        buyer_constraints: Buyer's constraints
+        
+    Returns:
+        Analysis text
+    """
+    # Format the conversation for the prompt
+    conversation_text = "\n".join([
+        f"{msg['role'].capitalize()}: {msg['message']}" 
+        for msg in conversation
+    ])
+    
+    # Create the prompt
+    prompt = f"""
+    Please analyze this negotiation from the buyer's perspective:
+    
+    CONVERSATION:
+    {conversation_text}
+    
+    BUYER'S CONSTRAINTS:
+    - Price: ${buyer_constraints['price'][0]} to ${buyer_constraints['price'][1]}
+    - Delivery time: {buyer_constraints['delivery_time'][0]} to {buyer_constraints['delivery_time'][1]} days
+    - Payment terms: {buyer_constraints['payment_terms'][0]}% to {buyer_constraints['payment_terms'][1]}%
+    
+    {"FINAL TERMS:" if final_terms else "NO DEAL REACHED"}
+    {f"- Price: ${final_terms['price']}" if final_terms else ""}
+    {f"- Delivery time: {final_terms['delivery_time']} days" if final_terms else ""}
+    {f"- Payment terms: {final_terms['payment_terms']}%" if final_terms else ""}
+    
+    Please provide a detailed analysis including:
+    1. How well did the buyer do relative to their constraints?
+    2. What negotiation tactics did the buyer use effectively?
+    3. What mistakes or missed opportunities were there?
+    4. How could the buyer have achieved a better outcome?
+    5. What can be learned from this negotiation for future negotiations?
+    
+    Format your analysis with clear sections and bullet points where appropriate.
+    """
+    
+    # Call the OpenAI API
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert negotiation analyst specializing in helping buyers improve their negotiation skills."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        analysis = response.choices[0].message['content']
+        
+        # Add a header with the final terms for reference
+        header = "BUYER NEGOTIATION ANALYSIS\n" + "=" * 30 + "\n\n"
+        
+        if final_terms:
+            header += f"FINAL TERMS:\n"
+            header += f"- Price: ${final_terms['price']}\n"
+            header += f"- Delivery time: {final_terms['delivery_time']} days\n"
+            header += f"- Payment terms: {final_terms['payment_terms']}%\n\n"
+        else:
+            header += "NO DEAL REACHED\n\n"
+        
+        header += f"BUYER'S CONSTRAINTS:\n"
+        header += f"- Price: ${buyer_constraints['price'][0]} to ${buyer_constraints['price'][1]}\n"
+        header += f"- Delivery time: {buyer_constraints['delivery_time'][0]} to {buyer_constraints['delivery_time'][1]} days\n"
+        header += f"- Payment terms: {buyer_constraints['payment_terms'][0]}% to {buyer_constraints['payment_terms'][1]}%\n\n"
+        
+        return header + analysis
+    
+    except Exception as e:
+        return f"Error analyzing negotiation: {str(e)}"
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

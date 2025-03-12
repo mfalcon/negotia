@@ -1,5 +1,5 @@
 # Negotiation logs and analysis files
-*.txt
+data/*.txt
 
 # Python cache files
 __pycache__/

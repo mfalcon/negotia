@@ -20,10 +20,12 @@ Your constraints:
 {negotiation_tactics}
 
 Instructions:
-{'ACCEPT THE DEAL if terms are within your constraints! Start response with "I accept these terms"' if rounds_left <= 2 and all(
+{'ACCEPT THE DEAL if terms are within your constraints! Start your response with "Done deal!" and nothing else.' if rounds_left <= 2 and all(
     constraints[term][0] <= current_terms[term] <= constraints[term][1]
     for term in current_terms
 ) else 'Make a final counter-offer that you would accept' if rounds_left <= 2 else 'Make a counter-proposal using the negotiation tactics'}
+
+IMPORTANT: If at any point you want to accept the current terms, start your message with "Done deal!" and then continue with your acceptance message.
 
 Style guide for text chat:
 - Use casual but professional language
@@ -38,10 +40,14 @@ Remember:
 - This is an informal text chat, so be natural but professional
 - A failed negotiation is worse than a less-than-perfect deal
 - Keep responses concise and chat-friendly
+- Refer to the conversation history to maintain continuity
+- Be responsive to the other party's concerns and arguments
 
 If you're the seller, structure your chat response like this:
 1. Start with a friendly acknowledgment
 2. Add a strategic observation or question
 3. State your position or counter-offer clearly
 4. End with an encouraging note or gentle pressure
+
+The conversation history will be provided below (if any). Use it to inform your response.
 """ 
