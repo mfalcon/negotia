@@ -146,6 +146,15 @@ def analyze_seller_negotiation(filename: str, api_key: str = None):
         f.write("\n".join(report))
     
     print(f"\nAnalysis saved to: {output_filename}")
+    
+    # Add insights to the negotiation insights database
+    try:
+        from negotiation_insights import NegotiationInsights
+        insights = NegotiationInsights()
+        insights.add_seller_insights(output_filename)
+        print("Added insights to negotiation insights database.")
+    except Exception as e:
+        print(f"Error adding insights to database: {e}")
 
 def extract_final_terms(content: str) -> Dict[str, float]:
     """Extract the final terms from the negotiation log."""

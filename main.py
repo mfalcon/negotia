@@ -9,8 +9,7 @@ import time
 import os
 from datetime import datetime
 import json
-from prompts.seller_prompt import get_seller_prompt
-from prompts.buyer_prompt import get_buyer_prompt
+from template_manager import TemplateManager
 
 class AIRepository(ABC):
     @abstractmethod
@@ -206,7 +205,7 @@ class AINegotiator:
                  is_seller: bool, 
                  constraints: Dict[str, Tuple[float, float]], 
                  repository_type: str = "ollama",
-                 model_name: str = "llama3.2:latest",
+                 model_name: str = "llama2:latest",
                  api_key: str = None,
                  max_rounds: int = 20):
         self.name = name
@@ -220,6 +219,24 @@ class AINegotiator:
         self.max_rounds = max_rounds
         self.role = "seller" if is_seller else "buyer"
         self.last_message = None
+        self.template_manager = TemplateManager()
+        
+        # Find the most recent analysis file for this negotiator type
+        self.analysis_file = self._find_latest_analysis_file()
+    
+    def _find_latest_analysis_file(self) -> Optional[str]:
+        """Find the most recent analysis file for this negotiator type."""
+        import glob
+        import os
+        
+        # Get all analysis files for this negotiator type
+        pattern = f"data/{'seller' if self.is_seller else 'buyer'}_analysis_*.txt"
+        files = glob.glob(pattern)
+        
+        # Return the most recent file if any exist
+        if files:
+            return max(files, key=os.path.getmtime)
+        return None
     
     def extract_terms_with_llm(self, response: str) -> Dict[str, float]:
         """Extract terms from a message using an LLM."""
@@ -276,9 +293,19 @@ class AINegotiator:
             print(f"Error extracting terms with LLM: {e}")
             return {}
     
-    def extract_terms_with_regex(self, response: str) -> Dict[str, float]:
-        """Extract terms from a message using regex patterns as fallback."""
+    def extract_terms(self, response: str) -> Dict[str, float]:
+        """Extract numerical terms from a natural language response."""
         terms = {}
+        
+        try:
+            # First try to extract terms using LLM
+            llm_terms = self.extract_terms_with_llm(response)
+            if llm_terms:
+                return llm_terms
+        except Exception as e:
+            print(f"Error extracting terms with LLM: {e}")
+        
+        # Fall back to regex extraction if LLM extraction fails
         try:
             # Price extraction
             price_matches = re.findall(r'\$\s*(\d+(?:,\d+)?(?:\.\d+)?)|(\d+(?:,\d+)?(?:\.\d+)?)\s*dollars', response.lower())
@@ -300,23 +327,11 @@ class AINegotiator:
                 terms["payment_terms"] = float(payment_matches[0])
             
             print(f"Regex extracted terms: {terms}")
-            return terms
-            
         except Exception as e:
             print(f"Error in regex term extraction: {e}")
-            return {}
-    
-    def extract_terms(self, response: str) -> Dict[str, float]:
-        """Extract terms from a message using LLM with regex fallback."""
-        # Try LLM extraction first
-        terms = self.extract_terms_with_llm(response)
-        
-        # If LLM extraction failed or found no terms, try regex
-        if not terms:
-            terms = self.extract_terms_with_regex(response)
         
         return terms
-    
+
     def extract_acceptance(self, response: str) -> bool:
         """
         Extract acceptance from a response.
@@ -325,29 +340,30 @@ class AINegotiator:
         return "Done deal!" in response
     
     def create_negotiation_prompt(self, negotiation_state: NegotiationState) -> str:
-        """Create a context-aware negotiation prompt with conversation history."""
-        current_terms = negotiation_state.current_terms
-        rounds_left = negotiation_state.get_rounds_left()
+        """Create a negotiation prompt using the template manager."""
+        # Get conversation history
         conversation_history = negotiation_state.get_conversation_history()
         
         if self.is_seller:
+            # Calculate price gap for seller
             target_price = self.constraints['price'][1] * 0.95
-            current_price_gap = ((target_price - current_terms['price']) / target_price) * 100
-            base_prompt = get_seller_prompt(
-                current_terms, 
-                rounds_left, 
-                {**self.constraints, 'max_rounds': self.max_rounds}, 
-                current_price_gap
+            current_price_gap = ((target_price - negotiation_state.current_terms['price']) / target_price) * 100
+            
+            return self.template_manager.render_seller_prompt(
+                current_terms=negotiation_state.current_terms,
+                rounds_left=negotiation_state.get_rounds_left(),
+                constraints={**self.constraints, 'max_rounds': self.max_rounds},
+                current_price_gap=current_price_gap,
+                conversation_history=conversation_history,
+                analysis_file=self.analysis_file
             )
         else:
-            base_prompt = get_buyer_prompt(
-                current_terms, 
-                rounds_left, 
-                {**self.constraints, 'max_rounds': self.max_rounds}
+            return self.template_manager.render_buyer_prompt(
+                current_terms=negotiation_state.current_terms,
+                rounds_left=negotiation_state.get_rounds_left(),
+                constraints={**self.constraints, 'max_rounds': self.max_rounds},
+                conversation_history=conversation_history
             )
-        
-        # Add conversation history to the prompt
-        return base_prompt + conversation_history
     
     def negotiate(self, negotiation_state: NegotiationState) -> Tuple[Dict[str, float], bool]:
         """Generate a negotiation response based on the current state."""
@@ -460,7 +476,7 @@ def negotiate(seller: AINegotiator, buyer: AINegotiator, max_rounds: int = 10) -
         "delivery_time": (seller.constraints["delivery_time"][0] + buyer.constraints["delivery_time"][1]) / 2,
         "payment_terms": (seller.constraints["payment_terms"][0] + buyer.constraints["payment_terms"][1]) / 2
     }
-    
+
     state = NegotiationState(initial_terms, max_rounds)
     
     logger.log_initial_terms(initial_terms)
@@ -483,7 +499,7 @@ def negotiate(seller: AINegotiator, buyer: AINegotiator, max_rounds: int = 10) -
             logger.log_deal_reached("Seller", state.current_terms, seller.constraints, buyer.constraints)
             print("\n[Deal reached: Seller accepted the terms]")
             return state.current_terms
-        
+            
         # Buyer's turn
         buyer_terms, buyer_accepted = buyer.negotiate(state)
         logger.log_message("Buyer", buyer.last_message)
@@ -501,9 +517,9 @@ def negotiate(seller: AINegotiator, buyer: AINegotiator, max_rounds: int = 10) -
         if state.get_rounds_left() <= 5:
             logger.log_warning(state.get_rounds_left())
             print(f"\n[Warning: {state.get_rounds_left()} rounds remaining]")
-        
+            
         time.sleep(1)
-    
+
     logger.log_negotiation_failed(state.current_terms)
     print("\n[Negotiation failed: No deal reached]")
     return None
