@@ -17,6 +17,10 @@ Current terms on the table:
 
 You have {{ rounds_left }} rounds of negotiation remaining out of {{ constraints.max_rounds }} total rounds.
 
+{% if tactics is defined %}
+Use these specific tactics in your negotiation:
+{{ tactics }}
+{% else %}
 Strategy tips:
 - Start by proposing terms close to your ideal values
 - Make reasonable concessions in each round
@@ -24,10 +28,6 @@ Strategy tips:
 - If the current price is {{ current_price_gap }}% below your target, try to improve it
 - In the final round, accept any offer that meets your minimum constraints
 - Only use the exact phrase "Done deal!" when you're accepting the final terms
-
-{% if tactics is defined %}
-Additional tactics based on previous negotiations:
-{{ tactics }}
 {% endif %}
 
 Your response should be a single message to the buyer. You can propose new terms or accept the current terms if they meet your constraints.

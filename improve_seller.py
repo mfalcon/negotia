@@ -142,16 +142,16 @@ def analyze_negotiation(negotiation_file):
     
     # Create a prompt for the AI
     prompt = f"""
-    You are an expert negotiation coach. Analyze this negotiation transcript and provide specific advice 
+    You are an expert negotiation coach. Analyze this negotiation transcript and provide CONCISE, ACTIONABLE advice 
     to improve the seller's performance in future negotiations.
     
     Focus on:
-    1. Effective tactics the seller used that should be continued
-    2. Missed opportunities or weaknesses in the seller's approach
-    3. Specific phrases or strategies the seller should use in future negotiations
-    4. How to better respond to the buyer's tactics
+    1. 2-3 effective tactics the seller should continue using
+    2. 2-3 specific improvements the seller should make
+    3. 4-5 exact phrases the seller should use in future negotiations
     
-    Format your response as a structured analysis with clear, actionable advice.
+    Format your response as a BRIEF, STRUCTURED list of bullet points with clear, actionable advice.
+    DO NOT include lengthy explanations or analysis.
     
     NEGOTIATION TRANSCRIPT:
     {negotiation_content}
@@ -169,10 +169,11 @@ def analyze_negotiation(negotiation_file):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are an expert negotiation coach specializing in business negotiations."},
+            {"role": "system", "content": "You are an expert negotiation coach. Provide only brief, actionable bullet points."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.7,
+        max_tokens=600  # Limit the response length
     )
     
     analysis = response.choices[0].message.content
@@ -197,13 +198,36 @@ def update_seller_template(analysis):
     os.makedirs('templates/seller', exist_ok=True)
     
     # Path to the tactics template
-    tactics_file = 'templates/seller/tactics.j2'  # Changed from tactics.jinja2 to tactics.j2
+    tactics_file = 'templates/seller/tactics.j2'
     
     try:
-        # Create or update the tactics file
+        # Create a more structured tactics file
         with open(tactics_file, 'w') as f:
             f.write("# Seller Tactics\n\n")
-            f.write(analysis)
+            
+            # Extract key sections from the analysis
+            sections = analysis.split("\n\n")
+            
+            # Write each section in a more structured format
+            f.write("## Effective Tactics\n")
+            for line in analysis.split("\n"):
+                if line.strip().startswith("-") and any(keyword in line.lower() for keyword in ["effective", "continue", "strength"]):
+                    f.write(f"{line}\n")
+            
+            f.write("\n## Improvement Areas\n")
+            for line in analysis.split("\n"):
+                if line.strip().startswith("-") and any(keyword in line.lower() for keyword in ["improve", "should", "better"]):
+                    f.write(f"{line}\n")
+            
+            f.write("\n## Recommended Phrases\n")
+            for line in analysis.split("\n"):
+                if "\"" in line and line.strip().startswith("-"):
+                    f.write(f"{line}\n")
+            
+            f.write("\n## Closing Tactics\n")
+            f.write("- Focus on reaching agreement rather than maximizing every term\n")
+            f.write("- Accept terms that meet your minimum requirements\n")
+            f.write("- Use \"Done deal!\" when accepting final terms that meet your constraints\n")
         
         print(f"✅ Seller tactics template updated: {tactics_file}")
         return True
