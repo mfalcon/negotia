@@ -1,139 +1,116 @@
 import os
-import re
-from typing import Dict, Any, List, Optional
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader
+from typing import Dict, Any, Optional
 
 class TemplateManager:
-    def __init__(self, templates_dir: str = "templates"):
-        self.env = Environment(
-            loader=FileSystemLoader(templates_dir),
-            autoescape=select_autoescape(['html', 'xml'])
-        )
+    """
+    Manages Jinja2 templates for the negotiation system.
+    Handles loading and rendering templates with proper context.
+    """
+    
+    def __init__(self):
+        """Initialize the template manager with the Jinja2 environment."""
+        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+        self.env = Environment(loader=FileSystemLoader(template_dir))
+        
+        # Cache for loaded templates to avoid duplicate loading
+        self._template_cache = {}
+        
+    def _get_template(self, template_path: str):
+        """Get a template from cache or load it if not cached."""
+        if template_path not in self._template_cache:
+            self._template_cache[template_path] = self.env.get_template(template_path)
+        return self._template_cache[template_path]
     
     def render_seller_prompt(self, 
                             current_terms: Dict[str, float], 
-                            rounds_left: int, 
-                            constraints: Dict[str, Any], 
+                            rounds_left: int,
+                            constraints: Dict[str, Any],
                             current_price_gap: float,
                             conversation_history: str = "",
                             analysis_file: Optional[str] = None) -> str:
         """
-        Render the seller prompt template with the given parameters.
+        Render the seller prompt template with the given context.
         
         Args:
             current_terms: Current negotiation terms
-            rounds_left: Number of rounds left
+            rounds_left: Number of rounds left in the negotiation
             constraints: Seller's constraints
-            current_price_gap: Current price gap percentage
-            conversation_history: Formatted conversation history
-            analysis_file: Path to a seller analysis file to extract suggestions from
+            current_price_gap: Gap between current price and target price
+            conversation_history: History of the conversation
+            analysis_file: Path to analysis file (optional)
+            
+        Returns:
+            str: The rendered prompt
         """
-        # Determine urgency level
-        urgency_level = "medium" if rounds_left > 5 else "critical"
+        # Load the main seller template
+        template = self._get_template('seller_prompt.j2')
         
-        # Urgency context based on level
-        urgency_notes = {
-            "low": "Use tactical empathy while anchoring high. Create scarcity and competition pressure.",
-            "medium": "Leverage time pressure and competition. Focus on value and what they might lose.",
-            "critical": "Use final call tactics to push for closure."
+        # Prepare context with all required variables
+        context = {
+            'current_terms': current_terms,
+            'rounds_left': rounds_left,
+            'constraints': constraints,
+            'current_price_gap': current_price_gap,
+            'conversation_history': conversation_history
         }
         
-        # Extract analysis suggestions if file provided
-        analysis_suggestions = []
-        if analysis_file and os.path.exists(analysis_file):
-            analysis_suggestions = self._extract_analysis_suggestions(analysis_file)
+        # Load tactics from the tactics template - explicitly use .j2 extension
+        tactics_path = 'seller/tactics.j2'
+        try:
+            tactics_template = self._get_template(tactics_path)
+            context['tactics'] = tactics_template.render(
+                constraints=constraints,
+                current_price_gap=current_price_gap,
+                rounds_left=rounds_left
+            )
+            print(f"Successfully loaded tactics from {tactics_path}")
+        except Exception as e:
+            print(f"Warning: Could not load seller tactics template {tactics_path}: {e}")
+            
+            # Fall back to analysis file if tactics template fails
+            if analysis_file and os.path.exists(analysis_file):
+                print(f"Loading tactics from analysis file: {analysis_file}")
+                with open(analysis_file, 'r') as f:
+                    context['tactics'] = f.read()
         
-        # Check if terms are within constraints
-        terms_within_constraints = all(
-            constraints[term][0] <= current_terms[term] <= constraints[term][1]
-            for term in current_terms if term in constraints
-        )
-        
-        # Render the tactics template first
-        tactics_template = self.env.get_template("seller/tactics.jinja2")
-        tactics_content = tactics_template.render(
-            constraints=constraints,
-            current_price_gap=current_price_gap,
-            urgency_level=urgency_level,
-            analysis_suggestions=analysis_suggestions
-        )
-        
-        # Render the base template with the tactics content
-        base_template = self.env.get_template("base.jinja2")
-        return base_template.render(
-            role="seller",
-            current_terms=current_terms,
-            rounds_left=rounds_left,
-            constraints=constraints,
-            urgency_level=urgency_level,
-            urgency_note=urgency_notes[urgency_level],
-            tactics=tactics_content,
-            terms_within_constraints=terms_within_constraints,
-            conversation_history=conversation_history
-        )
+        # Render the template with the context
+        return template.render(**context)
     
-    def render_buyer_prompt(self, 
-                           current_terms: Dict[str, float], 
-                           rounds_left: int, 
+    def render_buyer_prompt(self,
+                           current_terms: Dict[str, float],
+                           rounds_left: int,
                            constraints: Dict[str, Any],
-                           conversation_history: str = "") -> str:
+                           conversation_history: str = "",
+                           analysis_file: Optional[str] = None) -> str:
         """
-        Render the buyer prompt template with the given parameters.
+        Render the buyer prompt template with the given context.
         
         Args:
             current_terms: Current negotiation terms
-            rounds_left: Number of rounds left
+            rounds_left: Number of rounds left in the negotiation
             constraints: Buyer's constraints
-            conversation_history: Formatted conversation history
+            conversation_history: History of the conversation
+            analysis_file: Path to analysis file (optional)
+            
+        Returns:
+            str: The rendered prompt
         """
-        # Determine urgency level
-        urgency_level = "low" if rounds_left > 5 else "medium" if rounds_left > 2 else "critical"
+        # Load the main buyer template
+        template = self._get_template('buyer_prompt.j2')
         
-        # Urgency context based on level
-        urgency_notes = {
-            "low": "Negotiate towards an agreement while protecting your interests. Remember you need to close a deal soon.",
-            "medium": "Time is short - focus on reaching a deal with acceptable terms. Your boss is expecting results.",
-            "critical": f"FINAL ROUNDS! Accept any terms within your constraints or risk no deal at all! You cannot afford to walk away empty-handed."
+        # Prepare context with all required variables
+        context = {
+            'current_terms': current_terms,
+            'rounds_left': rounds_left,
+            'constraints': constraints,
+            'conversation_history': conversation_history
         }
         
-        # Check if terms are within constraints
-        terms_within_constraints = all(
-            constraints[term][0] <= current_terms[term] <= constraints[term][1]
-            for term in current_terms if term in constraints
-        )
+        # Load tactics if analysis file exists
+        if analysis_file and os.path.exists(analysis_file):
+            with open(analysis_file, 'r') as f:
+                context['tactics'] = f.read()
         
-        # Render the tactics template first
-        tactics_template = self.env.get_template("buyer/tactics.jinja2")
-        tactics_content = tactics_template.render(
-            constraints=constraints
-        )
-        
-        # Render the base template with the tactics content
-        base_template = self.env.get_template("base.jinja2")
-        return base_template.render(
-            role="buyer",
-            current_terms=current_terms,
-            rounds_left=rounds_left,
-            constraints=constraints,
-            urgency_level=urgency_level,
-            urgency_note=urgency_notes[urgency_level],
-            tactics=tactics_content,
-            terms_within_constraints=terms_within_constraints,
-            conversation_history=conversation_history
-        )
-    
-    def _extract_analysis_suggestions(self, analysis_file: str) -> List[str]:
-        """Extract improvement suggestions from a seller analysis file."""
-        with open(analysis_file, 'r') as f:
-            content = f.read()
-        
-        # Extract improvement suggestions section
-        suggestions_section = re.search(r"--- IMPROVEMENT SUGGESTIONS ---\n(.*?)(?=\n\n|\Z)", 
-                                       content, re.DOTALL)
-        if not suggestions_section:
-            return []
-        
-        # Extract individual suggestions
-        suggestions_text = suggestions_section.group(1)
-        suggestions = re.findall(r"- (.*?)(?=\n-|\Z)", suggestions_text, re.DOTALL)
-        return [s.strip() for s in suggestions if s.strip()] 
+        # Render the template with the context
+        return template.render(**context) 

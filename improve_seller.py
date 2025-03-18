@@ -12,6 +12,8 @@ import openai
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 import shutil
+import time
+import sys
 
 def get_latest_negotiation_file() -> Optional[str]:
     """Get the path to the most recent negotiation log file."""
@@ -130,223 +132,119 @@ def extract_negotiation_data(file_path: str) -> Dict[str, Any]:
         
         return basic_data
 
-def analyze_negotiation_with_llm(negotiation_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Use LLM to analyze the negotiation and suggest improvements."""
-    client = openai.OpenAI()
+def analyze_negotiation(negotiation_file):
+    """Analyze a negotiation log file using AI to generate improvement suggestions."""
+    print(f"Analyzing negotiation with AI...")
     
-    # Prepare the prompt
-    system_prompt = """
-    You are an expert negotiation coach specializing in helping sellers improve their negotiation skills.
-    Analyze the provided negotiation data and suggest specific improvements for the seller's template.
+    # Read the negotiation file
+    with open(negotiation_file, 'r') as f:
+        negotiation_content = f.read()
+    
+    # Create a prompt for the AI
+    prompt = f"""
+    You are an expert negotiation coach. Analyze this negotiation transcript and provide specific advice 
+    to improve the seller's performance in future negotiations.
     
     Focus on:
-    1. Identifying effective techniques that worked well
-    2. Spotting missed opportunities or weaknesses
-    3. Suggesting specific template improvements
-    4. Providing new tactics or phrases that could be more effective
+    1. Effective tactics the seller used that should be continued
+    2. Missed opportunities or weaknesses in the seller's approach
+    3. Specific phrases or strategies the seller should use in future negotiations
+    4. How to better respond to the buyer's tactics
     
-    Your analysis should be detailed, actionable, and focused on improving the seller's performance in future negotiations.
+    Format your response as a structured analysis with clear, actionable advice.
+    
+    NEGOTIATION TRANSCRIPT:
+    {negotiation_content}
     """
     
-    # Use double curly braces to escape them in f-strings
-    user_prompt = f"""
-    Here is the data from a recent negotiation:
+    # Get OpenAI API key from environment
+    openai_api_key = os.getenv('OPENAI_API_KEY')
+    if not openai_api_key:
+        raise ValueError("Please set OPENAI_API_KEY environment variable")
     
-    Seller Messages:
-    {json.dumps(negotiation_data["seller_messages"], indent=2)}
+    # Initialize OpenAI client
+    client = openai.OpenAI(api_key=openai_api_key)
     
-    Buyer Messages:
-    {json.dumps(negotiation_data["buyer_messages"], indent=2)}
-    
-    Final Terms: {negotiation_data["final_terms"]}
-    Deal Reached: {negotiation_data["deal_reached"]}
-    Deal Acceptor: {negotiation_data["deal_acceptor"]}
-    
-    Seller Score: {negotiation_data["seller_score"]}
-    Buyer Score: {negotiation_data["buyer_score"]}
-    
-    Seller Constraints: {negotiation_data["seller_constraints"]}
-    Buyer Constraints: {negotiation_data["buyer_constraints"]}
-    
-    Please analyze this negotiation and provide:
-    1. A summary of what worked well for the seller
-    2. Identification of missed opportunities or weaknesses
-    3. 3-5 specific template improvements (exact phrases or tactics to add)
-    4. 2-3 new effective phrases the seller could use
-    5. Overall strategy recommendations
-    
-    Format your response as JSON with these keys:
-    {{
-        "strengths": ["list of what worked well"],
-        "weaknesses": ["list of weaknesses"],
-        "template_improvements": ["specific template changes"],
-        "new_phrases": ["new effective phrases"],
-        "strategy_recommendations": ["overall strategy recommendations"]
-    }}
-    """
-    
-    # Call the LLM
+    # Generate analysis
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "system", "content": "You are an expert negotiation coach specializing in business negotiations."},
+            {"role": "user", "content": prompt}
         ],
-        response_format={"type": "json_object"}
+        temperature=0.7,
     )
     
-    # Parse the response
-    try:
-        analysis = json.loads(response.choices[0].message.content)
-        return analysis
-    except json.JSONDecodeError:
-        print("Error: Could not parse LLM response as JSON.")
-        print(response.choices[0].message.content)
-        return {
-            "strengths": [],
-            "weaknesses": [],
-            "template_improvements": [],
-            "new_phrases": [],
-            "strategy_recommendations": []
-        }
-
-def update_seller_template(analysis: Dict[str, Any]) -> bool:
-    """Update the seller tactics template with the analysis insights."""
-    template_path = "templates/seller/tactics.jinja2"
+    analysis = response.choices[0].message.content
     
-    # Create a backup of the current template
+    # Save the analysis
+    os.makedirs('data/analysis', exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = f"templates/seller/tactics_{timestamp}.jinja2.bak"
+    negotiation_id = os.path.basename(negotiation_file).replace('.txt', '')
+    analysis_file = f"data/analysis/improvement_{negotiation_id}_{timestamp}.txt"
+    
+    with open(analysis_file, 'w') as f:
+        f.write(analysis)
+    
+    print(f"Analysis report saved to {analysis_file}")
+    return analysis_file, analysis
+
+def update_seller_template(analysis):
+    """Update the seller tactics template with new insights."""
+    print("Updating seller template...")
+    
+    # Ensure the directory exists
+    os.makedirs('templates/seller', exist_ok=True)
+    
+    # Path to the tactics template
+    tactics_file = 'templates/seller/tactics.j2'  # Changed from tactics.jinja2 to tactics.j2
     
     try:
-        shutil.copy2(template_path, backup_path)
-        print(f"Created backup of seller template at {backup_path}")
+        # Create or update the tactics file
+        with open(tactics_file, 'w') as f:
+            f.write("# Seller Tactics\n\n")
+            f.write(analysis)
         
-        with open(template_path, 'r') as f:
-            current_template = f.read()
-        
-        # Add new phrases to the Strategic Phrases section
-        if analysis["new_phrases"]:
-            strategic_phrases_section = re.search(r"4\. Strategic Phrases to Use:(.*?)5\.", current_template, re.DOTALL)
-            if strategic_phrases_section:
-                current_phrases = strategic_phrases_section.group(1)
-                new_phrases_text = current_phrases
-                
-                for phrase in analysis["new_phrases"]:
-                    if phrase not in current_phrases:
-                        new_phrases_text += f"   - \"{phrase}\"\n"
-                
-                current_template = current_template.replace(current_phrases, new_phrases_text)
-        
-        # Add template improvements to the top of the template
-        if analysis["template_improvements"]:
-            improvements_text = "\n{% if analysis_suggestions %}\nBased on previous negotiation analysis:\n{% for suggestion in analysis_suggestions %}\n- {{ suggestion }}\n{% endfor %}\n{% endif %}\n\n"
-            
-            # Add a new section for the latest improvements
-            improvements_text += "Latest negotiation insights:\n"
-            for improvement in analysis["template_improvements"]:
-                improvements_text += f"- {improvement}\n"
-            
-            # Find the right position to insert the improvements
-            urgency_section_match = re.search(r"5\. Urgency Creation:(.*?)Current situation analysis:", current_template, re.DOTALL)
-            if urgency_section_match:
-                insert_position = urgency_section_match.end(1)
-                current_template = current_template[:insert_position] + improvements_text + current_template[insert_position:]
-        
-        # Write the updated template
-        with open(template_path, 'w') as f:
-            f.write(current_template)
-        
-        print(f"Updated seller template with new insights")
+        print(f"✅ Seller tactics template updated: {tactics_file}")
         return True
-    
     except Exception as e:
         print(f"Error updating seller template: {e}")
         return False
 
-def save_analysis_report(negotiation_data: Dict[str, Any], analysis: Dict[str, Any]) -> str:
-    """Save the analysis report to a file."""
-    os.makedirs("data/analysis", exist_ok=True)
+def find_latest_negotiation():
+    """Find the most recent negotiation log file."""
+    negotiation_files = [f for f in os.listdir('data') if f.startswith('negotiation_') and f.endswith('.txt')]
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_filename = os.path.basename(negotiation_data["file_path"])
-    base_name = os.path.splitext(base_filename)[0]
-    output_filename = f"data/analysis/improvement_{base_name}_{timestamp}.txt"
+    if not negotiation_files:
+        print("No negotiation logs found in the data directory.")
+        return None
     
-    report = []
-    report.append("=== NEGOTIATION IMPROVEMENT ANALYSIS ===")
-    report.append(f"File analyzed: {negotiation_data['file_path']}")
-    report.append(f"Analysis date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    report.append(f"Deal reached: {negotiation_data['deal_reached']}")
-    if negotiation_data['deal_reached']:
-        report.append(f"Deal acceptor: {negotiation_data['deal_acceptor']}")
-        report.append(f"Final terms: {negotiation_data['final_terms']}")
-    
-    report.append(f"Seller score: {negotiation_data['seller_score']}")
-    report.append(f"Buyer score: {negotiation_data['buyer_score']}")
-    
-    report.append("\n=== STRENGTHS ===")
-    for strength in analysis.get("strengths", []):
-        report.append(f"✓ {strength}")
-    
-    report.append("\n=== WEAKNESSES ===")
-    for weakness in analysis.get("weaknesses", []):
-        report.append(f"✗ {weakness}")
-    
-    report.append("\n=== TEMPLATE IMPROVEMENTS ===")
-    for improvement in analysis.get("template_improvements", []):
-        report.append(f"• {improvement}")
-    
-    report.append("\n=== NEW EFFECTIVE PHRASES ===")
-    for phrase in analysis.get("new_phrases", []):
-        report.append(f"• \"{phrase}\"")
-    
-    report.append("\n=== STRATEGY RECOMMENDATIONS ===")
-    for recommendation in analysis.get("strategy_recommendations", []):
-        report.append(f"• {recommendation}")
-    
-    with open(output_filename, 'w') as f:
-        f.write("\n".join(report))
-    
-    print(f"Analysis report saved to {output_filename}")
-    return output_filename
+    # Sort by creation time (newest first)
+    latest_file = max(negotiation_files, key=lambda f: os.path.getctime(os.path.join('data', f)))
+    return os.path.join('data', latest_file)
 
 def main():
-    """Main function to analyze negotiation and update seller template."""
     print("=== Negotiation Performance Analyzer and Prompt Updater ===")
     
-    # Get the latest negotiation file
-    latest_file = get_latest_negotiation_file()
-    if not latest_file:
-        print("No negotiation files found. Exiting.")
+    # Find the latest negotiation log
+    latest_negotiation = find_latest_negotiation()
+    if not latest_negotiation:
+        print("❌ No negotiation logs found to analyze.")
         return
     
-    print(f"Analyzing latest negotiation: {latest_file}")
+    print(f"Analyzing latest negotiation: {latest_negotiation}")
     
-    # Extract data from the negotiation file
-    negotiation_data = extract_negotiation_data(latest_file)
-    
-    # Analyze the negotiation with LLM
-    print("Analyzing negotiation with AI...")
-    analysis = analyze_negotiation_with_llm(negotiation_data)
-    
-    # Save the analysis report
-    report_file = save_analysis_report(negotiation_data, analysis)
+    # Analyze the negotiation
+    analysis_file, analysis = analyze_negotiation(latest_negotiation)
     
     # Update the seller template
-    print("Updating seller template...")
     success = update_seller_template(analysis)
     
-    if success:
-        print("\n=== Summary ===")
-        print(f"✓ Analyzed negotiation: {latest_file}")
-        print(f"✓ Generated analysis report: {report_file}")
-        print(f"✓ Updated seller template with improvements")
-        print("\nKey improvements:")
-        for i, improvement in enumerate(analysis.get("template_improvements", [])[:3], 1):
-            print(f"{i}. {improvement}")
-    else:
+    if not success:
         print("\n❌ Failed to update seller template")
+    else:
+        print("\n✅ Seller template updated successfully!")
+        print(f"The next negotiation will use the improved tactics.")
 
 if __name__ == "__main__":
     main() 
