@@ -1,24 +1,42 @@
-# Seller Tactics
+# Seller Tactics: Chris Voss's 'Never Split the Difference' Approach
 
-## Key Strategies
-- Start with a price close to your target (${{ constraints.price[1] }})
-- Make small, incremental concessions (3-5% at a time)
-- Link price to value and quality throughout the negotiation
-- Use delivery time as leverage when price concessions are needed
+## Tactical Empathy
+- "I understand your need to minimize costs while still getting quality - that's exactly why our pricing reflects the premium value we deliver."
+- "It seems like you're looking for the best possible deal, which I appreciate. Let me show you why our terms represent excellent value."
+- "I can see you're focused on your budget constraints, which is why I want to find a solution that works for both of us."
 
-## Effective Phrases
-- "While I can adjust the price somewhat, I want to ensure you receive the premium quality we're known for."
-- "If we agree on {{ constraints.payment_terms[1] }}% upfront payment, I can offer a more competitive price of $X."
-- "By extending the delivery time to X days, we can reduce the price to $Y while maintaining quality."
+## Calibrated Questions
+- "How would you justify to your team accepting a lower quality product just to save a small percentage on price?"
+- "What would happen if the delivery was delayed because you chose a less reliable supplier with a shorter timeline?"
+- "How would a payment structure with {{ constraints.payment_terms[0] }}% upfront impact your cash flow compared to the value you'll receive?"
 
-## Response Tactics
-- When buyer focuses only on price: "Let's consider the complete package - price, quality, delivery, and payment terms."
-- When buyer makes a low offer: "I appreciate your position, but that's significantly below our cost structure. Let's find middle ground."
-- When nearing final rounds: "We're both invested in reaching an agreement. Let's focus on the terms that matter most to each of us."
+## Emotional Labeling
+- "It seems like you're concerned about the price, but I wonder if your real concern is about getting sufficient value."
+- "You appear hesitant about the delivery timeline, which makes me think on-time delivery is critical for your operations."
+- "I sense you're focused on minimizing upfront payment, which suggests cash flow might be a priority for you right now."
 
+## Mirroring Techniques
+- When buyer mentions price: "Too expensive?" (then silence for 4 seconds)
+- When buyer pushes on timeline: "Need it faster?" (then silence for 4 seconds)
+- When buyer negotiates payment terms: "Lower upfront payment?" (then silence for 4 seconds)
+
+## Strategic 'No' Questions
+- "Would it be ridiculous to suggest that investing in quality now will save you more in the long run?"
+- "Is it unreasonable to expect fair compensation for the premium service and reliability we provide?"
+- "Would it be outrageous to consider that our payment terms actually protect both parties?"
+
+## Anchoring Tactics
+- Start with terms at or very near your target values: ${{ constraints.price[1] }}, {{ constraints.delivery_time[1] }} days, {{ constraints.payment_terms[1] }}% upfront
+- Make minimal concessions (no more than 3-5% per round)
+- Always trade concessions: "I can reduce the price to $X if we can agree on Y days delivery time"
+
+## Black Swan Tactics
 {% if rounds_left <= 3 %}
-## Closing Tactics
-- Focus on reaching agreement rather than maximizing every term
-- Accept terms that meet your minimum requirements
-- Use "Done deal!" when accepting final terms that meet your constraints
+- "What's the biggest challenge you're facing in this negotiation that's preventing us from reaching an agreement?"
+- "How can we structure this deal so it's a clear win for you while still being viable for us?"
+{% endif %}
+
+{% if rounds_left == 1 %}
+- "What would you need to see in this final offer to say yes today?"
+- Only use "Done deal!" if terms meet at least your minimum requirements: ${{ constraints.price[0] }}, {{ constraints.delivery_time[0] }} days, {{ constraints.payment_terms[0] }}% upfront
 {% endif %}

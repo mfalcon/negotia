@@ -133,25 +133,34 @@ def extract_negotiation_data(file_path: str) -> Dict[str, Any]:
         return basic_data
 
 def analyze_negotiation(negotiation_file):
-    """Analyze a negotiation log file using AI to generate improvement suggestions."""
+    """Analyze a negotiation log file using AI to generate improvement suggestions based on Chris Voss's techniques."""
     print(f"Analyzing negotiation with AI...")
     
     # Read the negotiation file
     with open(negotiation_file, 'r') as f:
         negotiation_content = f.read()
     
-    # Create a prompt for the AI
+    # Create a prompt for the AI that incorporates Chris Voss's negotiation principles
     prompt = f"""
-    You are an expert negotiation coach. Analyze this negotiation transcript and provide CONCISE, ACTIONABLE advice 
-    to improve the seller's performance in future negotiations.
+    You are an expert negotiation coach trained in the methods of Chris Voss (author of "Never Split the Difference"). 
+    Analyze this negotiation transcript and provide SPECIFIC, TACTICAL advice to help the seller WIN future negotiations.
     
-    Focus on:
-    1. 2-3 effective tactics the seller should continue using
-    2. 2-3 specific improvements the seller should make
-    3. 4-5 exact phrases the seller should use in future negotiations
+    Focus on these Chris Voss techniques:
+    1. Tactical Empathy - Understanding the buyer's perspective to gain advantage
+    2. Calibrated Questions - Using "how" and "what" questions to guide the buyer
+    3. Labeling - Naming emotions to defuse or reinforce them
+    4. Mirroring - Repeating the last few words to encourage elaboration
+    5. Creating the illusion of control - Making the buyer feel they're in charge
     
-    Format your response as a BRIEF, STRUCTURED list of bullet points with clear, actionable advice.
-    DO NOT include lengthy explanations or analysis.
+    Provide:
+    1. 2-3 specific tactical empathy phrases the seller should use
+    2. 2-3 calibrated questions to shift leverage to the seller
+    3. 2-3 effective labels to manage emotions
+    4. 2-3 mirroring techniques for this specific negotiation context
+    5. 1-2 "no"-oriented questions that actually lead to "yes"
+    
+    Format your response as SPECIFIC, ACTIONABLE tactics the seller can immediately implement.
+    Each tactic should be a precise phrase or question the seller can use verbatim.
     
     NEGOTIATION TRANSCRIPT:
     {negotiation_content}
@@ -169,11 +178,11 @@ def analyze_negotiation(negotiation_file):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are an expert negotiation coach. Provide only brief, actionable bullet points."},
+            {"role": "system", "content": "You are an expert in Chris Voss's negotiation techniques from 'Never Split the Difference'. Provide specific, tactical advice that will help the seller win negotiations."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.7,
-        max_tokens=600  # Limit the response length
+        max_tokens=800
     )
     
     analysis = response.choices[0].message.content
@@ -191,7 +200,7 @@ def analyze_negotiation(negotiation_file):
     return analysis_file, analysis
 
 def update_seller_template(analysis):
-    """Update the seller tactics template with new insights."""
+    """Update the seller tactics template with Chris Voss-inspired negotiation techniques."""
     print("Updating seller template...")
     
     # Ensure the directory exists
@@ -201,35 +210,75 @@ def update_seller_template(analysis):
     tactics_file = 'templates/seller/tactics.j2'
     
     try:
-        # Create a more structured tactics file
+        # Create a structured tactics file based on Chris Voss's methods
         with open(tactics_file, 'w') as f:
-            f.write("# Seller Tactics\n\n")
+            f.write("# Seller Tactics: Chris Voss's 'Never Split the Difference' Approach\n\n")
             
-            # Extract key sections from the analysis
-            sections = analysis.split("\n\n")
-            
-            # Write each section in a more structured format
-            f.write("## Effective Tactics\n")
+            # Tactical Empathy section
+            f.write("## Tactical Empathy\n")
             for line in analysis.split("\n"):
-                if line.strip().startswith("-") and any(keyword in line.lower() for keyword in ["effective", "continue", "strength"]):
+                if "empathy" in line.lower() and line.strip().startswith("-") and "\"" in line:
                     f.write(f"{line}\n")
             
-            f.write("\n## Improvement Areas\n")
+            # Calibrated Questions section
+            f.write("\n## Calibrated Questions\n")
             for line in analysis.split("\n"):
-                if line.strip().startswith("-") and any(keyword in line.lower() for keyword in ["improve", "should", "better"]):
+                if any(term in line.lower() for term in ["question", "how", "what"]) and line.strip().startswith("-") and "?" in line:
                     f.write(f"{line}\n")
             
-            f.write("\n## Recommended Phrases\n")
+            # Labeling section
+            f.write("\n## Emotional Labeling\n")
             for line in analysis.split("\n"):
-                if "\"" in line and line.strip().startswith("-"):
+                if any(term in line.lower() for term in ["label", "emotion", "feel", "seems"]) and line.strip().startswith("-"):
                     f.write(f"{line}\n")
             
-            f.write("\n## Closing Tactics\n")
-            f.write("- Focus on reaching agreement rather than maximizing every term\n")
-            f.write("- Accept terms that meet your minimum requirements\n")
-            f.write("- Use \"Done deal!\" when accepting final terms that meet your constraints\n")
+            # Mirroring section
+            f.write("\n## Mirroring Techniques\n")
+            for line in analysis.split("\n"):
+                if any(term in line.lower() for term in ["mirror", "repeat", "echo"]) and line.strip().startswith("-"):
+                    f.write(f"{line}\n")
+            
+            # No-oriented questions
+            f.write("\n## Strategic 'No' Questions\n")
+            for line in analysis.split("\n"):
+                if "no" in line.lower() and line.strip().startswith("-") and "?" in line:
+                    f.write(f"{line}\n")
+            
+            # Add default tactics if sections are empty
+            sections = ["Tactical Empathy", "Calibrated Questions", "Emotional Labeling", "Mirroring Techniques", "Strategic 'No' Questions"]
+            content = f.tell()
+            
+            if content < 500:  # If not much content was written, add defaults
+                f.seek(0)
+                f.write("# Seller Tactics: Chris Voss's 'Never Split the Difference' Approach\n\n")
+                
+                f.write("## Tactical Empathy\n")
+                f.write("- \"It sounds like you're looking for the best value, not just the lowest price.\"\n")
+                f.write("- \"I understand that budget constraints are a real challenge you're facing.\"\n")
+                
+                f.write("\n## Calibrated Questions\n")
+                f.write("- \"How would a faster delivery time impact your operations?\"\n")
+                f.write("- \"What would need to happen for you to consider a higher upfront payment?\"\n")
+                
+                f.write("\n## Emotional Labeling\n")
+                f.write("- \"It seems like the price point is causing you some frustration.\"\n")
+                f.write("- \"It looks like you're concerned about committing to a higher upfront payment.\"\n")
+                
+                f.write("\n## Mirroring Techniques\n")
+                f.write("- When buyer mentions price: \"The price is too high?\"\n")
+                f.write("- When buyer pushes on delivery: \"Faster delivery?\"\n")
+                
+                f.write("\n## Strategic 'No' Questions\n")
+                f.write("- \"Would it be a ridiculous idea to consider a slightly longer delivery time in exchange for a better price?\"\n")
+                f.write("- \"Is it unreasonable to expect some flexibility on payment terms given the quality we're offering?\"\n")
+            
+            # Always add the closing tactics
+            f.write("\n## Black Swan Tactics\n")
+            f.write("- When deadlocked: \"What's the biggest challenge you're facing in this negotiation?\"\n")
+            f.write("- For final rounds: \"How can we reach an agreement that you'd be comfortable presenting to your team?\"\n")
+            f.write("- Use \"Done deal!\" only when terms meet your minimum requirements\n")
         
-        print(f"✅ Seller tactics template updated: {tactics_file}")
+        print(f"✅ Seller tactics template updated with Chris Voss techniques: {tactics_file}")
         return True
     except Exception as e:
         print(f"Error updating seller template: {e}")

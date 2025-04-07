@@ -125,10 +125,41 @@ class TemplateManager:
             'conversation_history': conversation_history
         }
         
-        # Load tactics if analysis file exists
-        if analysis_file and os.path.exists(analysis_file):
-            with open(analysis_file, 'r') as f:
-                context['tactics'] = f.read()
+        # Load tactics from the tactics template - explicitly use .j2 extension
+        tactics_path = 'buyer/tactics.j2'
+        try:
+            tactics_template = self._get_template(tactics_path)
+            tactics_content = tactics_template.render(
+                constraints=constraints,
+                rounds_left=rounds_left
+            )
+            
+            # Only include tactics if they're not too verbose (limit to reasonable size)
+            if len(tactics_content.split('\n')) <= 25:  # Limit to 25 lines max
+                context['tactics'] = tactics_content
+                print(f"Successfully loaded tactics from {tactics_path}")
+            else:
+                # Extract just the most important parts if too verbose
+                print(f"Tactics file too verbose, extracting key points")
+                lines = tactics_content.split('\n')
+                # Get headers and first bullet point under each header
+                important_lines = []
+                for i, line in enumerate(lines):
+                    if line.startswith('#') or (i > 0 and lines[i-1].startswith('#') and line.strip().startswith('-')):
+                        important_lines.append(line)
+                context['tactics'] = '\n'.join(important_lines)
+        except Exception as e:
+            print(f"Warning: Could not load buyer tactics template {tactics_path}: {e}")
+            
+            # Fall back to analysis file if tactics template fails
+            if analysis_file and os.path.exists(analysis_file):
+                print(f"Loading tactics from analysis file: {analysis_file}")
+                with open(analysis_file, 'r') as f:
+                    analysis_content = f.read()
+                    # Extract just key points from analysis
+                    lines = analysis_content.split('\n')
+                    important_lines = [line for line in lines if line.strip().startswith('**') or line.strip().startswith('-')]
+                    context['tactics'] = '\n'.join(important_lines[:20])  # Limit to 20 lines
         
         # Render the template with the context
         return template.render(**context) 
