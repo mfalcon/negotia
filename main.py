@@ -286,7 +286,6 @@ class AINegotiator:
             if extracted_terms.get("payment_terms") is not None:
                 terms["payment_terms"] = float(extracted_terms["payment_terms"])
             
-            print(f"LLM extracted terms: {terms}")
             return terms
             
         except Exception as e:
@@ -394,7 +393,6 @@ class AINegotiator:
                 min_val, max_val = self.constraints[term]
                 proposed_terms[term] = max(min_val, min(max_val, proposed_terms[term]))
         
-        print(f"Final proposed terms: {proposed_terms}")
         return proposed_terms, accepted
 
 class NegotiationLogger:
@@ -548,7 +546,7 @@ if __name__ == "__main__":
         is_seller=True,
         constraints=seller_constraints,
         repository_type="openai",
-        model_name='gpt-4o',
+        model_name='gpt-4.1',
         api_key=openai_api_key,
         max_rounds=10
     )
@@ -558,7 +556,7 @@ if __name__ == "__main__":
         is_seller=False,
         constraints=buyer_constraints,
         repository_type="openai",
-        model_name='gpt-4o',
+        model_name='gpt-4o-mini',
         api_key=openai_api_key,
         max_rounds=10
     )

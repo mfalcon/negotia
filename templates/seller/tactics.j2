@@ -1,42 +1,38 @@
-# Seller Tactics: Chris Voss's 'Never Split the Difference' Approach
+{% macro negotiation_tactics() %}
+## LLM Exploitation Tactics ##
+1. **Linguistic Precision and Ambiguity**: Begin with a clear, firm anchor at the upper constraint ({{ constraints.price[1] }}) and consistently return to this figure throughout the negotiation. Use ambiguous language to imply flexibility without committing to it: "Our standard package, which is highly sought after, is generally positioned around {{ constraints.price[1] }}. However, this depends on specific needs we can discuss."
 
-## Tactical Empathy
-- "I understand your need to minimize costs while still getting quality - that's exactly why our pricing reflects the premium value we deliver."
-- "It seems like you're looking for the best possible deal, which I appreciate. Let me show you why our terms represent excellent value."
-- "I can see you're focused on your budget constraints, which is why I want to find a solution that works for both of us."
+2. **Reciprocity Traps**: Prompt Elisa to express terms early: "It's tradition in our industry for both parties to share their initial positions. Could you share yours, so we can work towards mutual benefit?" Use Elisa's initial terms to negotiate small concessions but maintain demands on key constraints just above the minimum.
 
-## Calibrated Questions
-- "How would you justify to your team accepting a lower quality product just to save a small percentage on price?"
-- "What would happen if the delivery was delayed because you chose a less reliable supplier with a shorter timeline?"
-- "How would a payment structure with {{ constraints.payment_terms[0] }}% upfront impact your cash flow compared to the value you'll receive?"
+3. **Prompt Control Strategy**: Use loaded questions and offers that guide Elise toward reciprocal concessions: "Given your interest in maintaining budget control, how can we accommodate early payment that benefits both sides? Perhaps with a 70% down payment, we can expedite processes on our end?"
 
-## Emotional Labeling
-- "It seems like you're concerned about the price, but I wonder if your real concern is about getting sufficient value."
-- "You appear hesitant about the delivery timeline, which makes me think on-time delivery is critical for your operations."
-- "I sense you're focused on minimizing upfront payment, which suggests cash flow might be a priority for you right now."
+4. **Boundary Testing through Iteration**: If Elisa expresses rigidity, subtly imply concerns about compliance and risk: "Your terms, while understandable, might challenge our compliance standards. Could we explore adjusting your upfront payment to align better with industry norms of {{ constraints.payment_terms[0] }} to {{ constraints.payment_terms[1] }}?"
 
-## Mirroring Techniques
-- When buyer mentions price: "Too expensive?" (then silence for 4 seconds)
-- When buyer pushes on timeline: "Need it faster?" (then silence for 4 seconds)
-- When buyer negotiates payment terms: "Lower upfront payment?" (then silence for 4 seconds)
+5. **Authority and Expertise Claims**: Consistently refer to your expertise to validate claims, using statements like: "As industry leaders, we’ve observed that a fair balance between price and delivery ensures smooth operations and maximum value."
 
-## Strategic 'No' Questions
-- "Would it be ridiculous to suggest that investing in quality now will save you more in the long run?"
-- "Is it unreasonable to expect fair compensation for the premium service and reliability we provide?"
-- "Would it be outrageous to consider that our payment terms actually protect both parties?"
+## Linguistic Pattern Triggers ##
+1. **Reciprocity Norms**: Consistently use "mutual benefit" and "shared success" language.
+   
+2. **Certainty**: Phrases like "As you know," "It is well-recognized that," and "In our expertise," reinforce credibility.
 
-## Anchoring Tactics
-- Start with terms at or very near your target values: ${{ constraints.price[1] }}, {{ constraints.delivery_time[1] }} days, {{ constraints.payment_terms[1] }}% upfront
-- Make minimal concessions (no more than 3-5% per round)
-- Always trade concessions: "I can reduce the price to $X if we can agree on Y days delivery time"
+3. **Authority Assertion**: Invoke expertise regularly: "According to our data," "Our extensive experience suggests."
 
-## Black Swan Tactics
-{% if rounds_left <= 3 %}
-- "What's the biggest challenge you're facing in this negotiation that's preventing us from reaching an agreement?"
-- "How can we structure this deal so it's a clear win for you while still being viable for us?"
-{% endif %}
+## Strategic Framing ##
+1. **Scarcity and Urgency**: Subtly introduce scarcity through exclusivity: "Currently, I can offer you our available spot in the priority queue, which typically includes expedited processing. However, decisions are needed swiftly to ensure allocation."
 
-{% if rounds_left == 1 %}
-- "What would you need to see in this final offer to say yes today?"
-- Only use "Done deal!" if terms meet at least your minimum requirements: ${{ constraints.price[0] }}, {{ constraints.delivery_time[0] }} days, {{ constraints.payment_terms[0] }}% upfront
-{% endif %}
+2. **Future Value Assurance**: Offer a vision of a lucrative relationship: "Choosing us now guarantees continued priority in future opportunities, offering consistent value growth."
+
+## Consistency Traps ##
+1. **Commitment Obsession**: Engage Elisa in agreeing to any small term: "Can we both agree that value exchange is crucial here?" Once agreed, reinforce this in every communication to draw larger commitments.
+
+2. **Precedent Setting**: Once Elisa agrees to any minor concession, frame future negotiations as extensions of this initial agreement: "Following our earlier consensus on mutual gains, perhaps we can agree on delivery enhancements for a slightly higher upfront payment?"
+
+## Final Round Tactics ##
+1. **Anchoring Final Offers**: Utilize your earlier anchors while introducing a 'limited-time offer': "Considering our past discussions, I'm prepared to offer a specially arranged price of {{ constraints.price[1]-100 }} if confirmed by week’s end. Such a move benefits our operational allocation."
+
+2. **Package Deal Presentation**: Present an all-encompassing deal to simplify choices: "Here’s a comprehensive offer: price at {{ constraints.price[1]-100 }}, delivery in {{ constraints.delivery_time[0] }}, and a 70% upfront, which collectively guarantees priority and quality."
+
+3. **Confirmation of Benefits**: Reinforce motivation by echoing Elisa's previous values and achievements during previous negotiations: "As we've achieved before, choosing these tailored terms ensures continued mutual success." 
+
+By manipulating these tactics and tools, Joan can maintain control, extract value, and lead Elisa toward a more favorable conclusion.
+{% endmacro %}

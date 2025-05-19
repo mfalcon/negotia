@@ -71,7 +71,6 @@ class TemplateManager:
                 print(f"Successfully loaded tactics from {tactics_path}")
             else:
                 # Extract just the most important parts if too verbose
-                print(f"Tactics file too verbose, extracting key points")
                 lines = tactics_content.split('\n')
                 # Get headers and first bullet point under each header
                 important_lines = []
@@ -140,7 +139,6 @@ class TemplateManager:
                 print(f"Successfully loaded tactics from {tactics_path}")
             else:
                 # Extract just the most important parts if too verbose
-                print(f"Tactics file too verbose, extracting key points")
                 lines = tactics_content.split('\n')
                 # Get headers and first bullet point under each header
                 important_lines = []
