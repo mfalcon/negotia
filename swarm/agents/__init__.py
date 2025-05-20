@@ -1,0 +1,1 @@
+"""Sub-paquete con agentes Buyer / Seller y repositorios LLM.""" 

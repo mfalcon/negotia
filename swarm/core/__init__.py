@@ -1,0 +1,1 @@
+"""Sub-paquete con las entidades y lógica 'puramente' de negocio (sin LLM).""" 

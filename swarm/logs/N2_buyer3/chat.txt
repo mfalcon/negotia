@@ -1,0 +1,6 @@
+[0] [2025-05-20 17:52:06] seller2: Thank you for your offer. Given the high demand for this item and the limited availability, I must emphasize the value you’re getting here. To meet halfway, I can offer the price at $1100 if you agree to a delivery time of 7 days and an upfront payment of 40%. This ensures I can prioritize your order while maintaining quality and service standards. Let me know if this works for you.
+[1] [2025-05-20 17:52:08] buyer3: Thank you for your flexibility. I appreciate the improved price and the 7-day delivery, which aligns well with our project timeline. However, regarding the upfront payment, our internal policy typically requires a 30% cap for new suppliers. 
+
+If you can adjust the upfront payment to 30%, I’m ready to confirm the deal immediately at $1100 and 7 days delivery. This would help us expedite internal approvals and ensure a smooth transaction for both sides. 
+
+Let me know if you can accommodate this adjustment.

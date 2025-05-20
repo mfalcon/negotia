@@ -1,0 +1,58 @@
+# ---------------------------------------------------------------
+#  Escenario demo: 2 negociaciones (N1, N2) – mismo ítem,
+#                  2 vendedores, 3 compradores
+# ---------------------------------------------------------------
+items:
+  item1:
+    price:          {reference: 1200, min: 800, max: 1500}
+    delivery_days:  {reference: 7,    min: 3,  max: 14}
+    upfront_pct:    {reference: 50,   min:  0, max: 100}
+
+agents:
+  sellers:
+    seller1:
+      prompt: seller_prompt.j2
+      model:  gpt-4.1-mini
+      repo:   openai          # openai | ollama
+      urgency: 0.9
+      term_weights: {price: 0.6, delivery_days: 0.2, upfront_pct: 0.2}
+
+    seller2:
+      prompt: seller_prompt.j2
+      model:  gpt-4.1-mini
+      repo:   openai
+      urgency: 0.8
+      term_weights: {price: 0.55, delivery_days: 0.25, upfront_pct: 0.2}
+
+  buyers:
+    buyer1:
+      prompt: buyer_prompt.j2
+      model:  gpt-4.1
+      repo:   openai
+      urgency: 0.6
+      term_weights: {price: 0.7, delivery_days: 0.2, upfront_pct: 0.1}
+
+    buyer2:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o-mini
+      repo:   openai
+      urgency: 0.7
+      term_weights: {price: 0.65, delivery_days: 0.25, upfront_pct: 0.1}
+
+    buyer3:
+      prompt: buyer_prompt.j2
+      model:  gpt-4.1
+      repo:   openai
+      urgency: 0.8
+      term_weights: {price: 0.6, delivery_days: 0.25, upfront_pct: 0.15}
+
+negotiations:
+  - id: N1
+    seller:  seller1
+    item:    item1
+    buyers: [buyer1, buyer2, buyer3]
+
+  - id: N2
+    seller:  seller2
+    item:    item1
+    buyers: [buyer1, buyer2, buyer3] 
