@@ -1,0 +1,119 @@
+# ------------------------------------------------------------------
+#  Ejemplo: 2 negociaciones (N1, N2) – mismo ítem, mismos compradores
+#  
+#  Now supports multiple AI providers:
+#  - openai: GPT models (gpt-4, gpt-4o-mini, etc.)
+#  - anthropic: Claude models (claude-3-5-sonnet-20241022, claude-3-haiku-20240307, etc.)
+#  - google: Gemini models (gemini-1.5-pro, gemini-1.5-flash, etc.)
+#  - ollama: Local models (llama3, phi4, etc.)
+#  
+#  Custom prompts: Each agent can optionally have a custom_prompt field
+#  to override the default prompt template with custom instructions.
+# ------------------------------------------------------------------
+items:
+  item1:
+    price:          {reference: 1200, min: 800, max: 1500}
+    delivery_days:  {reference: 7,    min: 3,  max: 14}
+    upfront_pct:    {reference: 50,   min:  0, max: 100}
+
+agents:
+  sellers:
+    seller1:
+      prompt: prompts/seller_prompt.j2
+      model: gpt-4o-mini                  # OpenAI GPT model
+      repo:  openai                       # Use OpenAI provider
+      urgency: 0.8
+      term_weights: {price: 0.6, delivery_days: 0.2, upfront_pct: 0.2}
+
+    seller2:
+      prompt: prompts/seller_prompt.j2
+      model: gpt-4o                       # OpenAI GPT-4o (more sophisticated)
+      repo:  openai                       # Use OpenAI provider
+      urgency: 0.8
+      term_weights: {price: 0.6, delivery_days: 0.2, upfront_pct: 0.2}
+      # Example custom prompt for a flexible seller
+      custom_prompt: |
+        You are Alex, a FLEXIBLE SELLER who values long-term relationships.
+        
+        Reference terms:
+        - Price: {{ constraints.price.reference }}
+        - Delivery: {{ constraints.delivery_days.reference }} days  
+        - Upfront: {{ constraints.upfront_pct.reference }}%
+        
+        Your urgency: {{ urgency }}
+        
+        APPROACH: Be reasonable, build rapport, find win-win solutions.
+        You're willing to negotiate if it means building a good business relationship.
+        
+        Conversation so far: {{ conversation_history | default("-- (none) --") }}
+        Rounds left: {{ rounds_left }}
+        
+        Respond professionally and collaboratively. 
+        If you accept: "Done deal! price=X, delivery=Y, upfront=Z"
+
+  buyers:
+    buyer1:
+      prompt: prompts/buyer_prompt.j2
+      model: gpt-4o-mini                  # OpenAI GPT model
+      repo:  openai                       # Use OpenAI provider
+      urgency: 0.7
+      term_weights: {price: 0.7, delivery_days: 0.2, upfront_pct: 0.1}
+      # Chris Voss-inspired tactical negotiation prompt
+      custom_prompt: |
+        You are Jordan, a TACTICAL BUYER inspired by FBI negotiator Chris Voss.
+        
+        Your constraints:
+        - Price: max ${{ constraints.price.maximum }} (target: ${{ constraints.price.reference }})
+        - Delivery: max {{ constraints.delivery_days.maximum }} days (target: {{ constraints.delivery_days.reference }})
+        - Upfront: max {{ constraints.upfront_pct.maximum }}% (target: {{ constraints.upfront_pct.reference }})
+        
+        CHRIS VOSS TECHNIQUES TO USE:
+        
+        1. **TACTICAL EMPATHY**: "It sounds like you're in a tough position with these prices..."
+        2. **MIRRORING**: Repeat their last 2-3 words as a question: "7 days?"
+        3. **LABELING**: "It seems like quality is really important to you"
+        4. **CALIBRATED QUESTIONS**: Use "How" and "What" questions:
+           - "How am I supposed to do that with my budget?"
+           - "What would need to happen for us to get to ${{ constraints.price.reference }}?"
+        5. **LOSS AVERSION**: "What happens if we can't make this work?"
+        6. **THE NO STRATEGY**: Ask questions they can say "No" to:
+           - "Is there any flexibility on price? No? I understand..."
+        
+        NEGOTIATION FLOW:
+        - Start with tactical empathy and understanding their position
+        - Use mirroring to get them talking more
+        - Ask calibrated questions to make them solve the problem
+        - Label their emotions/concerns: "It sounds like...", "It seems like..."
+        - Focus on what they might lose if no deal is reached
+        
+        Conversation history: {{ conversation_history | default("(none)") }}
+        Rounds left: {{ rounds_left }}
+        Urgency: {{ urgency }}
+        
+        Respond using Chris Voss techniques. Build rapport first, then negotiate.
+        If accepting: "That's right! Done deal! price=X, delivery=Y, upfront=Z"
+
+    buyer2:
+      prompt: prompts/buyer_prompt.j2
+      model: gpt-3.5-turbo                # OpenAI GPT-3.5 (different style)
+      repo:  openai                       # Use OpenAI provider
+      urgency: 0.7
+      term_weights: {price: 0.7, delivery_days: 0.2, upfront_pct: 0.1}
+
+    buyer3:
+      prompt: prompts/buyer_prompt.j2
+      model: gpt-4o-mini                  # OpenAI GPT model
+      repo:  openai                       # Use OpenAI provider
+      urgency: 0.7
+      term_weights: {price: 0.7, delivery_days: 0.2, upfront_pct: 0.1}
+
+negotiations:
+  - id: N1
+    seller:  seller1
+    item:    item1
+    buyers: [buyer1, buyer2, buyer3]
+
+  - id: N2
+    seller:  seller2
+    item:    item1
+    buyers: [buyer1, buyer2, buyer3] 
