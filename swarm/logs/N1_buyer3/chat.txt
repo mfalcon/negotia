@@ -1,6 +1,0 @@
-[0] [2025-05-20 17:51:52] seller1: Thank you for your offer. Given the high demand for this item and the limited availability, I must emphasize the value you’re getting here. To meet halfway, I can offer the price at 1100 with delivery in 7 days and a 40% up-front payment. This balances your needs and the premium quality of the product. If you can agree to these terms, we can finalize the deal promptly. How does that sound?
-[1] [2025-05-20 17:51:54] buyer3: Thank you for your flexibility. I appreciate the improved offer, but I still have some internal constraints to consider. While your price of 1100 and 7-day delivery are excellent, our finance team has a strict policy on upfront payments, especially for high-value items. 
-
-If you can adjust the upfront payment to 30%, I can commit to your price and delivery terms immediately. This would help us manage our cash flow while ensuring a quick close for you, given the high demand. 
-
-Let me know if you can accommodate this, and we can finalize the deal right away.

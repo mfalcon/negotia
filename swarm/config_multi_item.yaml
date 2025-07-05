@@ -1,0 +1,238 @@
+# ---------------------------------------------------------------
+#  Multi-Item Negotiation Scenario: 
+#  - Multiple products with different pricing and delivery terms
+#  - Quantity-based negotiations with bulk discounts
+#  - Mix of single-item and multi-item negotiations
+# ---------------------------------------------------------------
+
+items:
+  laptop:
+    name: "Business Laptop"
+    description: "High-performance laptop for business use"
+    category: "electronics"
+    price:          {reference: 1200, min: 900, max: 1500}
+    delivery_days:  {reference: 5,    min: 3,  max: 10}
+    upfront_pct:    {reference: 50,   min: 20, max: 80}
+
+  monitor:
+    name: "4K Monitor"
+    description: "27-inch 4K professional monitor"
+    category: "electronics"
+    price:          {reference: 400, min: 300, max: 500}
+    delivery_days:  {reference: 7,   min: 3,  max: 14}
+    upfront_pct:    {reference: 40,  min: 20, max: 70}
+
+  keyboard:
+    name: "Mechanical Keyboard"
+    description: "Professional mechanical keyboard"
+    category: "accessories"
+    price:          {reference: 150, min: 100, max: 200}
+    delivery_days:  {reference: 3,   min: 1,  max: 7}
+    upfront_pct:    {reference: 30,  min: 0,  max: 60}
+
+  mouse:
+    name: "Wireless Mouse"
+    description: "Ergonomic wireless mouse"
+    category: "accessories"
+    price:          {reference: 80, min: 60, max: 100}
+    delivery_days:  {reference: 3,  min: 1, max: 7}
+    upfront_pct:    {reference: 30, min: 0, max: 60}
+
+  software:
+    name: "Business Software License"
+    description: "Annual business software license"
+    category: "software"
+    price:          {reference: 500, min: 400, max: 600}
+    delivery_days:  {reference: 1,   min: 1,  max: 3}
+    upfront_pct:    {reference: 100, min: 80, max: 100}
+
+agents:
+  sellers:
+    tech_seller:
+      prompt: seller_prompt.j2
+      model:  gpt-4o-mini
+      repo:   openai
+      urgency: 0.8
+      term_weights: {price: 0.7, delivery_days: 0.1, upfront_pct: 0.2}
+      custom_prompt: |
+        You are TechCorp Sales, a TECHNOLOGY SELLER specializing in bulk business equipment.
+        
+        {% if constraints.requests %}
+        **Multi-item deal - Items being negotiated:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: {{ req.quantity }} units @ ${{ constraints.items[req.item_id].price.reference }} each
+        {% endfor %}
+        
+        **Your bulk pricing strategy:**
+        - Offer volume discounts for larger orders
+        - Bundle complementary items (laptop + monitor + accessories)
+        - Push for higher quantities to increase total deal value
+        {% else %}
+        **Single item negotiation:**
+        - Price: ${{ constraints.price.reference }} (min: ${{ constraints.price.minimum }})
+        - Delivery: {{ constraints.delivery_days.reference }} days
+        - Upfront: {{ constraints.upfront_pct.reference }}%
+        {% endif %}
+        
+        {% if other_negotiations %}
+        **Competition status:**
+        {% for n in other_negotiations %}
+        - {{ n.buyer }}: {{ n.status }}
+        {% endfor %}
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Use professional sales techniques. For multi-item: "Done deal! total=$X, delivery=Y, upfront=Z"
+        For single-item: "Done deal! price=X, delivery=Y, upfront=Z"
+
+    accessory_seller:
+      prompt: seller_prompt.j2
+      model:  gpt-3.5-turbo
+      repo:   openai
+      urgency: 0.7
+      term_weights: {price: 0.6, delivery_days: 0.2, upfront_pct: 0.2}
+
+  buyers:
+    startup_buyer:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o-mini
+      repo:   openai
+      urgency: 0.8
+      term_weights: {price: 0.8, delivery_days: 0.1, upfront_pct: 0.1}
+      custom_prompt: |
+        You are StartupCorp Procurement, a BUDGET-CONSCIOUS BUYER for a growing startup.
+        
+        {% if constraints.requests %}
+        **Multi-item shopping list:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: Need {{ req.quantity }} units (budget: ${{ constraints.items[req.item_id].price.reference }} each)
+        {% endfor %}
+        
+        **Total budget:** ${{ constraints.get_total_price_range().reference }} (max: ${{ constraints.get_total_price_range().maximum }})
+        
+        **Your strategy:**
+        - Negotiate package deals and bulk discounts
+        - Ask for volume pricing on larger orders
+        - Consider increasing quantities if price per unit drops significantly
+        {% else %}
+        **Single item budget:**
+        - Max price: ${{ constraints.price.maximum }}
+        - Target: ${{ constraints.price.reference }}
+        {% endif %}
+        
+        {% if other_negotiations %}
+        **Other buyers competing:**
+        {% for n in other_negotiations %}
+        - {{ n.buyer }}: {{ n.status }}
+        {% endfor %}
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Negotiate aggressively but stay within budget. For multi-item: "Done deal! total=$X, delivery=Y, upfront=Z"
+
+    enterprise_buyer:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o
+      repo:   openai
+      urgency: 0.6
+      term_weights: {price: 0.5, delivery_days: 0.3, upfront_pct: 0.2}
+
+    small_business_buyer:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o-mini
+      repo:   openai
+      urgency: 0.7
+      term_weights: {price: 0.7, delivery_days: 0.2, upfront_pct: 0.1}
+
+negotiations:
+  # Single-item negotiations (backward compatibility)
+  - id: N1_laptop
+    seller: tech_seller
+    item: laptop
+    buyers: [startup_buyer, enterprise_buyer]
+    max_turns: 8
+
+  - id: N2_monitor
+    seller: tech_seller
+    item: monitor
+    buyers: [startup_buyer, small_business_buyer]
+    max_turns: 8
+
+  # Multi-item negotiations
+  - id: N3_office_setup
+    seller: tech_seller
+    buyers: [startup_buyer, enterprise_buyer]
+    max_turns: 12
+    multi_item:
+      requests:
+        - item_id: laptop
+          quantity: 5
+          min_quantity: 3
+          max_quantity: 8
+        - item_id: monitor
+          quantity: 5
+          min_quantity: 3
+          max_quantity: 8
+        - item_id: keyboard
+          quantity: 5
+          min_quantity: 3
+          max_quantity: 8
+        - item_id: mouse
+          quantity: 5
+          min_quantity: 3
+          max_quantity: 8
+      global_delivery_days: {reference: 10, min: 7, max: 21}
+      global_upfront_pct: {reference: 50, min: 30, max: 70}
+      bulk_discount_tiers:
+        10: 5    # 5% discount for 10+ total items
+        20: 10   # 10% discount for 20+ total items
+        30: 15   # 15% discount for 30+ total items
+
+  - id: N4_accessories_bundle
+    seller: accessory_seller
+    buyers: [startup_buyer, small_business_buyer]
+    max_turns: 10
+    multi_item:
+      requests:
+        - item_id: keyboard
+          quantity: 10
+          min_quantity: 5
+          max_quantity: 15
+        - item_id: mouse
+          quantity: 10
+          min_quantity: 5
+          max_quantity: 15
+      global_delivery_days: {reference: 5, min: 3, max: 14}
+      global_upfront_pct: {reference: 40, min: 20, max: 60}
+      bulk_discount_tiers:
+        15: 8    # 8% discount for 15+ items
+        25: 12   # 12% discount for 25+ items
+
+  - id: N5_complete_package
+    seller: tech_seller
+    buyers: [enterprise_buyer]
+    max_turns: 15
+    multi_item:
+      requests:
+        - item_id: laptop
+          quantity: 20
+          min_quantity: 15
+          max_quantity: 30
+        - item_id: monitor
+          quantity: 20
+          min_quantity: 15
+          max_quantity: 30
+        - item_id: software
+          quantity: 20
+          min_quantity: 15
+          max_quantity: 30
+      global_delivery_days: {reference: 14, min: 10, max: 30}
+      global_upfront_pct: {reference: 60, min: 40, max: 80}
+      bulk_discount_tiers:
+        40: 8    # 8% discount for 40+ items
+        60: 12   # 12% discount for 60+ items
+        80: 18   # 18% discount for 80+ items 

@@ -28,4 +28,41 @@ class OllamaRepository(AIRepository):
         r.raise_for_status()
         return r.json()["response"].strip()
 
+class AnthropicRepository(AIRepository):
+    def __init__(self, model: str, api_key: str):
+        try:
+            import anthropic
+        except ImportError:
+            raise ImportError("anthropic library is required. Install with: pip install anthropic")
+        
+        self.model = model
+        self.client = anthropic.Anthropic(api_key=api_key)
+
+    def run(self, prompt: str) -> str:
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=1000,
+            temperature=0,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.content[0].text.strip()
+
+class GoogleRepository(AIRepository):
+    def __init__(self, model: str, api_key: str):
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            raise ImportError("google-generativeai library is required. Install with: pip install google-generativeai")
+        
+        self.model = model
+        genai.configure(api_key=api_key)
+        self.client = genai.GenerativeModel(model)
+
+    def run(self, prompt: str) -> str:
+        response = self.client.generate_content(
+            prompt,
+            generation_config={"temperature": 0}
+        )
+        return response.text.strip()
+
     ... 

@@ -1,5 +1,5 @@
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, BaseLoader, DictLoader
 
 class TemplateManager:
     def __init__(self, root: str = None):
@@ -14,4 +14,9 @@ class TemplateManager:
 
     def render(self, template_path: str, **ctx) -> str:
         template = self.env.get_template(template_path)
+        return template.render(**ctx)
+    
+    def render_custom(self, custom_prompt: str, **ctx) -> str:
+        """Render a custom prompt string directly instead of loading from file."""
+        template = self.env.from_string(custom_prompt)
         return template.render(**ctx) 

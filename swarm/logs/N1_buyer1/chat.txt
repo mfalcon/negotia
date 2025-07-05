@@ -1,5 +1,10 @@
-[0] [2025-05-20 17:51:44] seller1: Thank you for your offer. Given the high demand for this item and the limited availability, I must emphasize the value you’re getting here. To meet halfway, I can offer the price at 1100 with delivery in 7 days and an upfront payment of 40%. This balances your needs and mine fairly. If you can agree to these terms, we can finalize the deal promptly. How does that sound?
-[1] [2025-05-20 17:51:46] buyer1: Thank you for your flexibility. I appreciate the improved terms, but I still need to address our internal budget and payment policies. If you can adjust the upfront payment to 50% while keeping the price at 1100 and delivery in 7 days, I can commit to closing the deal today. This aligns with our standard payment procedures and allows us to move forward quickly. Can you accommodate this adjustment?
-[2] [2025-05-20 17:52:09] seller1: I appreciate your willingness to move forward quickly and your commitment to a 50% upfront payment. Given the strong demand and the value of this item, I can accept your proposal of price at 1100, delivery in 7 days, and 50% upfront payment. This ensures a fair balance for both parties and allows us to close the deal promptly.
+[0] [2025-05-21 22:19:14] buyer1: Thank you for your proposal. I appreciate your offer, but given our budget constraints and the urgency of our project, I need to see some movement on both price and delivery.
 
-Done deal! price=1100, delivery=7, upfront=50
+Here’s what I can do: if you can bring the price down to 1300 and guarantee delivery within 10 days, I’m willing to increase the upfront payment to 60%. This way, you get more cash flow up front, and we stay closer to our budget and timeline.
+
+Let me know if you can work with these terms.
+[1] [2025-05-21 22:19:17] seller1: Thank you for your offer and the increased upfront payment of 60%, which I appreciate as it improves cash flow. However, given the high demand for this item and the value it brings, I must hold firm on the price closer to my target. 
+
+I can meet you halfway on delivery and offer 8 days instead of 10, which ensures quality and timely fulfillment. In return, I would need to set the price at 1200, which reflects the product’s worth and market conditions.
+
+So, my counter-offer is: price 1200, delivery 8 days, upfront payment 60%. This balances your urgency and budget with the value and availability of the item. Let me know if this works for you.

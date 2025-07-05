@@ -1,0 +1,401 @@
+# ---------------------------------------------------------------
+#  Tech Components Multi-Item Negotiation Scenario: 
+#  - 3 Sellers: GPU specialist, CPU specialist, SSD specialist
+#  - 6 Buyers: Gaming companies, AI startups, data centers
+#  - High-value components with competitive pricing
+# ---------------------------------------------------------------
+
+items:
+  nvidia_3090:
+    name: "NVIDIA RTX 3090 24GB"
+    description: "High-end GPU for gaming and AI workloads"
+    category: "graphics"
+    price:          {reference: 1500, min: 1200, max: 1800}
+    delivery_days:  {reference: 7,    min: 3,   max: 14}
+    upfront_pct:    {reference: 60,   min: 40,  max: 80}
+
+  i9_processor:
+    name: "Intel Core i9-13900K"
+    description: "High-performance CPU for demanding applications"
+    category: "processor"
+    price:          {reference: 600, min: 450, max: 750}
+    delivery_days:  {reference: 5,   min: 2,  max: 10}
+    upfront_pct:    {reference: 50,  min: 30, max: 70}
+
+  ssd_5000gb:
+    name: "5TB NVMe SSD"
+    description: "High-capacity enterprise SSD storage"
+    category: "storage"
+    price:          {reference: 800, min: 600, max: 1000}
+    delivery_days:  {reference: 4,   min: 2,  max: 8}
+    upfront_pct:    {reference: 40,  min: 20, max: 60}
+
+agents:
+  sellers:
+    gpu_specialist:
+      prompt: seller_prompt.j2
+      model:  gpt-4o
+      repo:   openai
+      urgency: 0.8
+      term_weights: {price: 0.7, delivery_days: 0.1, upfront_pct: 0.2}
+      custom_prompt: |
+        You are TechGPU Solutions, a SPECIALIZED GPU SELLER with premium NVIDIA RTX 3090 cards.
+        
+        {% if constraints.requests %}
+        **Multi-item GPU deal - Items being negotiated:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: {{ req.quantity }} units @ ${{ constraints.items[req.item_id].price.reference }} each
+        {% endfor %}
+        
+        **Your GPU expertise:**
+        - Emphasize the 24GB VRAM advantage for AI/ML workloads
+        - Highlight gaming performance and content creation capabilities
+        - Offer bulk discounts for orders of 5+ GPUs
+        - Stress limited availability and high demand
+        {% else %}
+        **Single GPU sale:**
+        - Price: ${{ constraints.price.reference }} (min: ${{ constraints.price.minimum }})
+        - Delivery: {{ constraints.delivery_days.reference }} days
+        - Upfront: {{ constraints.upfront_pct.reference }}%
+        {% endif %}
+        
+        {% if other_negotiations %}
+        **Competition status:**
+        {% for n in other_negotiations %}
+        - {{ n.buyer }}: {{ n.status }}
+        {% endfor %}
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Use technical expertise to justify premium pricing. For multi-item: "Done deal! total=$X, delivery=Y, upfront=Z"
+
+    cpu_specialist:
+      prompt: seller_prompt.j2
+      model:  gpt-4o-mini
+      repo:   openai
+      urgency: 0.7
+      term_weights: {price: 0.6, delivery_days: 0.2, upfront_pct: 0.2}
+      custom_prompt: |
+        You are IntelPro Distributors, a SPECIALIZED CPU SELLER with Intel Core i9 processors.
+        
+        {% if constraints.requests %}
+        **Multi-item CPU deal:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: {{ req.quantity }} units @ ${{ constraints.items[req.item_id].price.reference }} each
+        {% endfor %}
+        
+        **Your CPU expertise:**
+        - Highlight 24-core performance (8P+16E cores)
+        - Emphasize overclocking potential and efficiency
+        - Offer volume pricing for system builders
+        - Stress compatibility with latest motherboards
+        {% endif %}
+        
+        {% if other_negotiations %}
+        **Competition:** {% for n in other_negotiations %}{{ n.buyer }}({{ n.status }}) {% endfor %}
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Focus on performance benchmarks and value proposition.
+
+    ssd_specialist:
+      prompt: seller_prompt.j2
+      model:  gpt-3.5-turbo
+      repo:   openai
+      urgency: 0.9
+      term_weights: {price: 0.5, delivery_days: 0.3, upfront_pct: 0.2}
+      custom_prompt: |
+        You are StorageMax Enterprise, a SPECIALIZED SSD SELLER with 5TB NVMe drives.
+        
+        {% if constraints.requests %}
+        **Multi-item storage deal:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: {{ req.quantity }} units @ ${{ constraints.items[req.item_id].price.reference }} each
+        {% endfor %}
+        
+        **Your storage expertise:**
+        - Emphasize enterprise-grade reliability and endurance
+        - Highlight blazing fast NVMe speeds (7000+ MB/s)
+        - Offer RAID configurations and data protection
+        - Stress capacity advantage for data-intensive applications
+        {% endif %}
+        
+        {% if other_negotiations %}
+        **Competition:** {% for n in other_negotiations %}{{ n.buyer }}({{ n.status }}) {% endfor %}
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Emphasize enterprise reliability and performance metrics.
+
+  buyers:
+    gaming_studio:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o
+      repo:   openai
+      urgency: 0.8
+      term_weights: {price: 0.6, delivery_days: 0.3, upfront_pct: 0.1}
+      custom_prompt: |
+        You are GameDev Studios, a GAMING COMPANY building high-end development workstations.
+        
+        {% if constraints.requests %}
+        **Multi-item workstation build:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: Need {{ req.quantity }} units (budget: ${{ constraints.items[req.item_id].price.reference }} each)
+        {% endfor %}
+        
+        **Total budget:** ${{ constraints.get_total_price_range().reference }} (max: ${{ constraints.get_total_price_range().maximum }})
+        
+        **Your gaming focus:**
+        - Need powerful GPUs for game development and testing
+        - Require fast CPUs for compilation and rendering
+        - Want reliable storage for large game assets
+        - Prioritize performance over cost savings
+        {% endif %}
+        
+        {% if other_negotiations %}
+        **Competition:** {% for n in other_negotiations %}{{ n.buyer }}({{ n.status }}) {% endfor %}
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Emphasize performance requirements for game development.
+
+    ai_startup:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o-mini
+      repo:   openai
+      urgency: 0.9
+      term_weights: {price: 0.7, delivery_days: 0.2, upfront_pct: 0.1}
+      custom_prompt: |
+        You are AI Innovations Inc, a MACHINE LEARNING STARTUP building AI training rigs.
+        
+        {% if constraints.requests %}
+        **AI training infrastructure:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: Need {{ req.quantity }} units (budget: ${{ constraints.items[req.item_id].price.reference }} each)
+        {% endfor %}
+        
+        **Your AI requirements:**
+        - Critical need for 24GB VRAM for large language models
+        - Require powerful CPUs for data preprocessing
+        - Need fast storage for training datasets
+        - Budget-conscious but performance-critical
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Emphasize AI/ML workload requirements and startup budget constraints.
+
+    data_center:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o
+      repo:   openai
+      urgency: 0.6
+      term_weights: {price: 0.5, delivery_days: 0.4, upfront_pct: 0.1}
+      custom_prompt: |
+        You are CloudScale DataCenters, an ENTERPRISE BUYER building server infrastructure.
+        
+        {% if constraints.requests %}
+        **Enterprise server build:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: Need {{ req.quantity }} units for server deployment
+        {% endfor %}
+        
+        **Your enterprise needs:**
+        - Bulk purchasing for multiple server racks
+        - Emphasis on reliability and warranty
+        - Flexible delivery schedules for phased deployment
+        - Volume discounts expected
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Focus on enterprise reliability, bulk pricing, and deployment flexibility.
+
+    crypto_miner:
+      prompt: buyer_prompt.j2
+      model:  gpt-3.5-turbo
+      repo:   openai
+      urgency: 0.8
+      term_weights: {price: 0.8, delivery_days: 0.1, upfront_pct: 0.1}
+      custom_prompt: |
+        You are CryptoMine Operations, a CRYPTOCURRENCY MINING operation expanding capacity.
+        
+        {% if constraints.requests %}
+        **Mining rig expansion:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: Need {{ req.quantity }} units for mining rigs
+        {% endfor %}
+        
+        **Your mining focus:**
+        - GPUs are critical for mining profitability
+        - Need efficient CPUs for mining management
+        - Require reliable storage for blockchain data
+        - Extremely price-sensitive due to ROI calculations
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Negotiate aggressively on price, emphasize bulk purchase potential.
+
+    content_creator:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o-mini
+      repo:   openai
+      urgency: 0.7
+      term_weights: {price: 0.6, delivery_days: 0.2, upfront_pct: 0.2}
+      custom_prompt: |
+        You are CreativeMedia Pro, a CONTENT CREATION STUDIO building editing workstations.
+        
+        {% if constraints.requests %}
+        **Content creation workstations:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: Need {{ req.quantity }} units for video editing rigs
+        {% endfor %}
+        
+        **Your creative needs:**
+        - GPUs essential for 4K/8K video rendering
+        - Fast CPUs for video encoding and effects
+        - Large storage for raw video footage
+        - Balance of performance and budget
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Emphasize creative workload requirements and professional use.
+
+    research_lab:
+      prompt: buyer_prompt.j2
+      model:  gpt-4o
+      repo:   openai
+      urgency: 0.5
+      term_weights: {price: 0.4, delivery_days: 0.3, upfront_pct: 0.3}
+      custom_prompt: |
+        You are University Research Computing, an ACADEMIC RESEARCH LAB building compute clusters.
+        
+        {% if constraints.requests %}
+        **Research computing cluster:**
+        {% for req in constraints.requests %}
+        - {{ req.item_id }}: Need {{ req.quantity }} units for research computing
+        {% endfor %}
+        
+        **Your research requirements:**
+        - GPUs for scientific computing and simulations
+        - High-performance CPUs for parallel processing
+        - Reliable storage for research data
+        - Academic budget constraints but quality requirements
+        {% endif %}
+        
+        **Conversation:** {{ conversation_history | default("(none)") }}
+        **Rounds left:** {{ rounds_left }}
+        
+        Emphasize academic use, budget constraints, and long-term reliability needs.
+
+negotiations:
+  # Multi-item negotiations - Complete workstation builds
+  - id: N1_gaming_workstation
+    seller: gpu_specialist
+    buyers: [gaming_studio, content_creator]
+    max_turns: 12
+    multi_item:
+      requests:
+        - item_id: nvidia_3090
+          quantity: 4
+          min_quantity: 2
+          max_quantity: 6
+      global_delivery_days: {reference: 7, min: 3, max: 14}
+      global_upfront_pct: {reference: 60, min: 40, max: 80}
+      bulk_discount_tiers:
+        4: 3    # 3% discount for 4+ GPUs
+        6: 5    # 5% discount for 6+ GPUs
+
+  - id: N2_ai_training_rigs
+    seller: gpu_specialist
+    buyers: [ai_startup, research_lab, data_center]
+    max_turns: 15
+    multi_item:
+      requests:
+        - item_id: nvidia_3090
+          quantity: 8
+          min_quantity: 4
+          max_quantity: 12
+      global_delivery_days: {reference: 10, min: 5, max: 14}
+      global_upfront_pct: {reference: 60, min: 40, max: 80}
+      bulk_discount_tiers:
+        6: 4    # 4% discount for 6+ GPUs
+        10: 8   # 8% discount for 10+ GPUs
+
+  - id: N3_cpu_bulk_order
+    seller: cpu_specialist
+    buyers: [data_center, gaming_studio, ai_startup]
+    max_turns: 10
+    multi_item:
+      requests:
+        - item_id: i9_processor
+          quantity: 10
+          min_quantity: 5
+          max_quantity: 20
+      global_delivery_days: {reference: 5, min: 2, max: 10}
+      global_upfront_pct: {reference: 50, min: 30, max: 70}
+      bulk_discount_tiers:
+        8: 5    # 5% discount for 8+ CPUs
+        15: 10  # 10% discount for 15+ CPUs
+
+  - id: N4_storage_solution
+    seller: ssd_specialist
+    buyers: [data_center, content_creator, research_lab]
+    max_turns: 8
+    multi_item:
+      requests:
+        - item_id: ssd_5000gb
+          quantity: 6
+          min_quantity: 3
+          max_quantity: 12
+      global_delivery_days: {reference: 4, min: 2, max: 8}
+      global_upfront_pct: {reference: 40, min: 20, max: 60}
+      bulk_discount_tiers:
+        5: 6    # 6% discount for 5+ SSDs
+        10: 12  # 12% discount for 10+ SSDs
+
+  - id: N5_mining_expansion
+    seller: gpu_specialist
+    buyers: [crypto_miner, ai_startup]
+    max_turns: 10
+    multi_item:
+      requests:
+        - item_id: nvidia_3090
+          quantity: 12
+          min_quantity: 8
+          max_quantity: 20
+      global_delivery_days: {reference: 14, min: 7, max: 21}
+      global_upfront_pct: {reference: 70, min: 50, max: 80}
+      bulk_discount_tiers:
+        10: 6   # 6% discount for 10+ GPUs
+        16: 10  # 10% discount for 16+ GPUs
+
+  - id: N6_complete_systems
+    seller: cpu_specialist
+    buyers: [gaming_studio, content_creator, research_lab]
+    max_turns: 12
+    multi_item:
+      requests:
+        - item_id: i9_processor
+          quantity: 6
+          min_quantity: 4
+          max_quantity: 10
+      global_delivery_days: {reference: 7, min: 3, max: 12}
+      global_upfront_pct: {reference: 50, min: 30, max: 70}
+      bulk_discount_tiers:
+        6: 4    # 4% discount for 6+ CPUs
+        8: 7    # 7% discount for 8+ CPUs 

@@ -91,9 +91,9 @@ def extract_negotiation_data(file_path: str) -> Dict[str, Any]:
     
     try:
         # Ask the LLM to extract the data
-        response = client.chat.completions.create(
+    response = client.chat.completions.create(
             model="gpt-4.1",
-            messages=[
+        messages=[
                 {"role": "system", "content": "You are a data extraction tool that returns only valid JSON."},
                 {"role": "user", "content": extract_prompt}
             ],
